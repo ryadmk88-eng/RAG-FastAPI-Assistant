@@ -1,2 +1,9 @@
+
 .venv/
+.env
 __pycache__/
+*.pyc
+
+data/fastapi_docs.json
+data/fastapi_chunks.json
+data/fastapi_embeddings.npy
