@@ -4049,6 +4049,7 @@ def document(
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/feedback.js"></script>
+<script src="/static/js/search_chats.js"></script>
 
 </body>
 
