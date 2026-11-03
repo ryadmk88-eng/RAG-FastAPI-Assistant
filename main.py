@@ -994,6 +994,196 @@ def result_card(
 
 
 # ============================================================
+# COMPARE MODE SUMMARY
+# ============================================================
+
+def compare_summary_card(
+    semantic_result,
+    bm25_result,
+):
+    semantic_retrieval = float(
+        semantic_result["retrieval_ms"]
+    )
+
+    bm25_retrieval = float(
+        bm25_result["retrieval_ms"]
+    )
+
+    semantic_total = float(
+        semantic_result["total_ms"]
+    )
+
+    bm25_total = float(
+        bm25_result["total_ms"]
+    )
+
+    semantic_citations = len(
+        extract_cited_sources(
+            semantic_result["answer"]
+        )
+    )
+
+    bm25_citations = len(
+        extract_cited_sources(
+            bm25_result["answer"]
+        )
+    )
+
+    if semantic_retrieval < bm25_retrieval:
+        retrieval_winner = "Semantic"
+        retrieval_difference = (
+            bm25_retrieval
+            - semantic_retrieval
+        )
+    elif bm25_retrieval < semantic_retrieval:
+        retrieval_winner = "BM25"
+        retrieval_difference = (
+            semantic_retrieval
+            - bm25_retrieval
+        )
+    else:
+        retrieval_winner = "Tie"
+        retrieval_difference = 0.0
+
+    if semantic_total < bm25_total:
+        total_winner = "Semantic"
+        total_difference = (
+            bm25_total
+            - semantic_total
+        ) / 1000
+    elif bm25_total < semantic_total:
+        total_winner = "BM25"
+        total_difference = (
+            semantic_total
+            - bm25_total
+        ) / 1000
+    else:
+        total_winner = "Tie"
+        total_difference = 0.0
+
+    retrieval_difference_text = (
+        f"{retrieval_difference:.1f} ms"
+    )
+
+    total_difference_text = (
+        f"{total_difference:.2f} s"
+    )
+
+    return f"""
+    <div class="comparison-summary">
+
+        <div class="comparison-title">
+
+            <div>
+
+                <span class="eyebrow">
+                    Live comparison
+                </span>
+
+                <h3>
+                    Comparison summary
+                </h3>
+
+            </div>
+
+            <span class="comparison-note">
+                Same question · Same corpus ·
+                Same language model
+            </span>
+
+        </div>
+
+
+        <div class="comparison-metrics">
+
+            <div class="comparison-metric">
+
+                <span>
+                    Faster retrieval
+                </span>
+
+                <strong>
+                    {retrieval_winner}
+                </strong>
+
+                <small>
+                    by {retrieval_difference_text}
+                </small>
+
+            </div>
+
+
+            <div class="comparison-metric">
+
+                <span>
+                    Faster total response
+                </span>
+
+                <strong>
+                    {total_winner}
+                </strong>
+
+                <small>
+                    by {total_difference_text}
+                </small>
+
+            </div>
+
+
+            <div class="comparison-metric">
+
+                <span>
+                    Semantic citations
+                </span>
+
+                <strong>
+                    {semantic_citations}
+                </strong>
+
+                <small>
+                    cited documentation sources
+                </small>
+
+            </div>
+
+
+            <div class="comparison-metric">
+
+                <span>
+                    BM25 citations
+                </span>
+
+                <strong>
+                    {bm25_citations}
+                </strong>
+
+                <small>
+                    cited documentation sources
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <div class="comparison-warning">
+
+            <strong>
+                Important:
+            </strong>
+
+            Faster does not automatically mean
+            more accurate. Retrieval quality,
+            source relevance, and answer correctness
+            should also be considered.
+
+        </div>
+
+    </div>
+    """
+
+
+# ============================================================
 # CSS
 # ============================================================
 
@@ -2400,6 +2590,131 @@ footer {
 
 
 /* ==========================================================
+   COMPARE SUMMARY
+========================================================== */
+
+.comparison-summary {
+    margin-bottom: 18px;
+
+    padding: 19px;
+
+    border:
+        1px solid
+        rgba(34, 211, 238, .18);
+
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(34, 211, 238, .055),
+            rgba(99, 102, 241, .035)
+        );
+
+    box-shadow:
+        0 16px 45px
+        rgba(0, 0, 0, .12);
+}
+
+.comparison-title {
+    display: flex;
+
+    align-items: flex-end;
+
+    justify-content:
+        space-between;
+
+    gap: 15px;
+
+    margin-bottom: 15px;
+}
+
+.comparison-title h3 {
+    margin: 0;
+
+    font-size: 17px;
+}
+
+.comparison-note {
+    color: var(--muted);
+
+    font-size: 10px;
+}
+
+.comparison-metrics {
+    display: grid;
+
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
+
+    gap: 10px;
+}
+
+.comparison-metric {
+    padding: 14px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 11px;
+
+    background:
+        rgba(255, 255, 255, .018);
+}
+
+.comparison-metric span {
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 9px;
+}
+
+.comparison-metric strong {
+    display: block;
+
+    margin-top: 3px;
+
+    color: #67e8f9;
+
+    font-size: 17px;
+}
+
+.comparison-metric small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #94a3b8;
+
+    font-size: 9px;
+}
+
+.comparison-warning {
+    margin-top: 13px;
+
+    padding: 11px 13px;
+
+    border-radius: 9px;
+
+    color: #cbd5e1;
+
+    background:
+        rgba(255, 255, 255, .018);
+
+    font-size: 10px;
+}
+
+.comparison-warning strong {
+    color: #a5f3fc;
+}
+
+
+
+/* ==========================================================
    RESPONSIVE
 ========================================================== */
 
@@ -2422,6 +2737,11 @@ footer {
     .source-grid {
         grid-template-columns:
             1fr;
+    }
+
+    .comparison-metrics {
+        grid-template-columns:
+            repeat(2, 1fr);
     }
 
 }
@@ -2490,6 +2810,16 @@ footer {
 
     .official-badge {
         width: fit-content;
+    }
+
+    .comparison-metrics {
+        grid-template-columns:
+            1fr;
+    }
+
+    .comparison-title {
+        align-items: stretch;
+        flex-direction: column;
     }
 
 }
@@ -3089,6 +3419,13 @@ def home_page(
             compact=True,
         )
 
+        comparison_summary = (
+            compare_summary_card(
+                semantic_result,
+                bm25_result,
+            )
+        )
+
         result_html = f"""
         <section
             class="results-section"
@@ -3118,6 +3455,8 @@ def home_page(
 
                 </div>
 
+
+                {comparison_summary}
 
                 <div class="compare-layout">
 
