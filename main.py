@@ -14,6 +14,15 @@ from semantic_search import (
     MODEL_NAME,
 )
 
+from bm25_search import (
+    build_bm25,
+    bm25_search,
+)
+
+
+# ---------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------
 
 load_dotenv()
 
@@ -28,9 +37,45 @@ api_key = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=api_key)
 
-chunks, embeddings = load_data()
-embedding_model = SentenceTransformer(MODEL_NAME)
 
+# ---------------------------------------------------------
+# Load shared corpus once
+# ---------------------------------------------------------
+
+print("Loading FastAPI corpus...")
+
+chunks, embeddings = load_data()
+
+print(f"Loaded {len(chunks)} chunks.")
+
+
+# ---------------------------------------------------------
+# Semantic retrieval setup
+# ---------------------------------------------------------
+
+print("Loading semantic embedding model...")
+
+embedding_model = SentenceTransformer(
+    MODEL_NAME
+)
+
+
+# ---------------------------------------------------------
+# BM25 setup
+# ---------------------------------------------------------
+
+print("Building BM25 index...")
+
+bm25_index = build_bm25(
+    chunks
+)
+
+print("Retrieval systems ready.")
+
+
+# ---------------------------------------------------------
+# Source handling
+# ---------------------------------------------------------
 
 def build_source_map(results):
     source_map = {}
@@ -52,7 +97,9 @@ def build_context(results, source_map):
     context_parts = []
 
     for result in results:
-        source_number = source_map[result["url"]]["number"]
+        source_number = (
+            source_map[result["url"]]["number"]
+        )
 
         context_parts.append(
             f"""
@@ -66,11 +113,24 @@ Documentation:
 """
         )
 
-    return "\n".join(context_parts)
+    return "\n".join(
+        context_parts
+    )
 
 
-def generate_answer(question, results, source_map):
-    context = build_context(results, source_map)
+# ---------------------------------------------------------
+# LLM generation
+# ---------------------------------------------------------
+
+def generate_answer(
+    question,
+    results,
+    source_map
+):
+    context = build_context(
+        results,
+        source_map
+    )
 
     valid_sources = ", ".join(
         f"[Source {source['number']}]"
@@ -87,10 +147,10 @@ Rules:
 - Do not invent information.
 - If the documentation does not contain enough information, say so.
 - Give a clear and concise technical answer.
-- Cite supporting documentation using [Source 1], [Source 2], etc.
-- Only use these valid source citations: {valid_sources}
-- Do not cite a source unless it directly supports the statement.
-- If multiple chunks use the same source number, they come from the same page.
+- Cite supporting evidence using [Source 1], [Source 2], etc.
+- Only use these valid citations: {valid_sources}
+- Do not cite a source unless it supports the statement.
+- Multiple excerpts with the same source number come from the same page.
 - Do not use outside knowledge.
 
 USER QUESTION:
@@ -108,6 +168,10 @@ FASTAPI DOCUMENTATION:
     return response.output_text
 
 
+# ---------------------------------------------------------
+# Find sources actually cited by LLM
+# ---------------------------------------------------------
+
 def extract_cited_source_numbers(answer):
     matches = re.findall(
         r"\[Source (\d+)\]",
@@ -120,15 +184,24 @@ def extract_cited_source_numbers(answer):
     }
 
 
+# ---------------------------------------------------------
+# Format generated answer for HTML
+# ---------------------------------------------------------
+
 def format_answer(answer):
-    safe_answer = html.escape(answer)
+    safe_answer = html.escape(
+        answer
+    )
 
     code_blocks = []
 
     def replace_code_block(match):
         code = match.group(1).strip()
 
-        placeholder = f"CODEBLOCKPLACEHOLDER{len(code_blocks)}"
+        placeholder = (
+            f"CODEBLOCKPLACEHOLDER"
+            f"{len(code_blocks)}"
+        )
 
         code_blocks.append(
             f"<pre><code>{code}</code></pre>"
@@ -151,7 +224,11 @@ def format_answer(answer):
 
     safe_answer = re.sub(
         r"\[Source (\d+)\]",
-        r'<span class="citation">[Source \1]</span>',
+        (
+            r'<span class="citation">'
+            r'[Source \1]'
+            r'</span>'
+        ),
         safe_answer,
     )
 
@@ -168,16 +245,30 @@ def format_answer(answer):
         if not block:
             continue
 
-        if block.startswith("CODEBLOCKPLACEHOLDER"):
-            formatted_blocks.append(block)
-        else:
+        if block.startswith(
+            "CODEBLOCKPLACEHOLDER"
+        ):
             formatted_blocks.append(
-                f"<p>{block.replace(chr(10), '<br>')}</p>"
+                block
             )
 
-    formatted = "\n".join(formatted_blocks)
+        else:
+            formatted_blocks.append(
+                "<p>"
+                + block.replace(
+                    "\n",
+                    "<br>"
+                )
+                + "</p>"
+            )
 
-    for index, code_html in enumerate(code_blocks):
+    formatted = "\n".join(
+        formatted_blocks
+    )
+
+    for index, code_html in enumerate(
+        code_blocks
+    ):
         formatted = formatted.replace(
             f"CODEBLOCKPLACEHOLDER{index}",
             code_html,
@@ -186,11 +277,22 @@ def format_answer(answer):
     return formatted
 
 
-def build_source_html(source_map, cited_numbers):
+# ---------------------------------------------------------
+# Source list
+# ---------------------------------------------------------
+
+def build_source_html(
+    source_map,
+    cited_numbers
+):
     source_items = []
 
     for source in source_map.values():
-        if source["number"] not in cited_numbers:
+
+        if (
+            source["number"]
+            not in cited_numbers
+        ):
             continue
 
         title = html.escape(
@@ -205,7 +307,10 @@ def build_source_html(source_map, cited_numbers):
         source_items.append(
             f"""
             <li>
-                <strong>Source {source['number']}:</strong>
+                <strong>
+                    Source {source['number']}:
+                </strong>
+
                 <a
                     href="{url}"
                     target="_blank"
@@ -217,11 +322,18 @@ def build_source_html(source_map, cited_numbers):
             """
         )
 
-    return "\n".join(source_items)
+    return "\n".join(
+        source_items
+    )
 
+
+# ---------------------------------------------------------
+# Web page
+# ---------------------------------------------------------
 
 def page_html(
     question="",
+    retrieval_method="semantic",
     answer="",
     sources="",
     error=""
@@ -230,11 +342,36 @@ def page_html(
         question
     )
 
+    semantic_selected = (
+        "selected"
+        if retrieval_method == "semantic"
+        else ""
+    )
+
+    bm25_selected = (
+        "selected"
+        if retrieval_method == "bm25"
+        else ""
+    )
+
+    method_label = (
+        "Semantic / Vector Search"
+        if retrieval_method == "semantic"
+        else "BM25 Keyword Search"
+    )
+
     answer_section = ""
 
     if answer:
         answer_section = f"""
         <div class="answer-box">
+
+            <div class="method-badge">
+                Retrieval method:
+                <strong>
+                    {method_label}
+                </strong>
+            </div>
 
             <h2>Answer</h2>
 
@@ -279,7 +416,6 @@ def page_html(
                 font-family: Arial, sans-serif;
                 background-color: #f4f6f8;
                 margin: 0;
-                padding: 0;
                 color: #222;
             }}
 
@@ -298,19 +434,25 @@ def page_html(
                 margin-top: 0;
             }}
 
-            h2 {{
-                margin-top: 0;
-            }}
-
             textarea {{
                 width: 100%;
-                height: 120px;
+                min-height: 120px;
                 padding: 15px;
                 font-size: 16px;
                 border: 1px solid #aaa;
                 border-radius: 8px;
                 box-sizing: border-box;
                 resize: vertical;
+            }}
+
+            select {{
+                width: 100%;
+                padding: 12px;
+                margin-top: 15px;
+                font-size: 16px;
+                border: 1px solid #aaa;
+                border-radius: 8px;
+                background: white;
             }}
 
             button {{
@@ -336,12 +478,20 @@ def page_html(
                 border: 1px solid #e2e5e8;
             }}
 
+            .method-badge {{
+                display: inline-block;
+                margin-bottom: 20px;
+                padding: 8px 12px;
+                background: #e0f2f1;
+                color: #00695c;
+                border-radius: 6px;
+            }}
+
             .answer-text {{
                 line-height: 1.6;
             }}
 
             .answer-text p {{
-                margin-top: 0;
                 margin-bottom: 16px;
             }}
 
@@ -362,7 +512,7 @@ def page_html(
             }}
 
             p code {{
-                background-color: #e8ecef;
+                background: #e8ecef;
                 padding: 2px 5px;
                 border-radius: 4px;
             }}
@@ -370,10 +520,6 @@ def page_html(
             .citation {{
                 color: #00796b;
                 font-weight: bold;
-            }}
-
-            .sources {{
-                padding-left: 22px;
             }}
 
             .sources li {{
@@ -387,7 +533,7 @@ def page_html(
             .error-box {{
                 margin-top: 25px;
                 padding: 15px;
-                background-color: #ffecec;
+                background: #ffecec;
                 border: 1px solid #e2a1a1;
                 border-radius: 8px;
                 color: #8a1f1f;
@@ -416,11 +562,29 @@ def page_html(
 
                 <textarea
                     name="question"
-                    placeholder="Example: How do I handle request validation errors in FastAPI?"
+                    placeholder="Ask a FastAPI question..."
                     required
                 >{safe_question}</textarea>
 
-                <br>
+                <select
+                    name="retrieval_method"
+                >
+
+                    <option
+                        value="semantic"
+                        {semantic_selected}
+                    >
+                        Semantic / Vector Search
+                    </option>
+
+                    <option
+                        value="bm25"
+                        {bm25_selected}
+                    >
+                        BM25 Keyword Search
+                    </option>
+
+                </select>
 
                 <button type="submit">
                     Ask
@@ -440,6 +604,10 @@ def page_html(
     """
 
 
+# ---------------------------------------------------------
+# Routes
+# ---------------------------------------------------------
+
 @app.get(
     "/",
     response_class=HTMLResponse
@@ -453,16 +621,42 @@ def home():
     response_class=HTMLResponse
 )
 def ask(
-    question: str = Form(...)
+    question: str = Form(...),
+    retrieval_method: str = Form(
+        "semantic"
+    ),
 ):
     try:
-        results = semantic_search(
-            question,
-            embedding_model,
-            chunks,
-            embeddings,
-            top_k=TOP_K,
-        )
+
+        # Semantic retrieval
+        if retrieval_method == "semantic":
+
+            results = semantic_search(
+                question,
+                embedding_model,
+                chunks,
+                embeddings,
+                top_k=TOP_K,
+            )
+
+        # BM25 retrieval
+        elif retrieval_method == "bm25":
+
+            results = bm25_search(
+                question,
+                bm25_index,
+                chunks,
+                top_k=TOP_K,
+            )
+
+        else:
+
+            return page_html(
+                question=question,
+                error=(
+                    "Unknown retrieval method."
+                ),
+            )
 
         source_map = build_source_map(
             results
@@ -480,10 +674,8 @@ def ask(
             )
         )
 
-        formatted_answer = (
-            format_answer(
-                answer
-            )
+        formatted_answer = format_answer(
+            answer
         )
 
         sources = build_source_html(
@@ -493,13 +685,15 @@ def ask(
 
         return page_html(
             question=question,
+            retrieval_method=retrieval_method,
             answer=formatted_answer,
             sources=sources,
         )
 
     except Exception as error:
+
         return page_html(
             question=question,
+            retrieval_method=retrieval_method,
             error=f"An error occurred: {error}",
         )
-        
