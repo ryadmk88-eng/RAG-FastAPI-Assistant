@@ -4008,14 +4008,20 @@ def document(
         </title>
 
         <style>
-            {CSS}
-        </style>
-        
-        <link
+    {CSS}
+</style>
+
+<link
     rel="stylesheet"
     href="/static/css/history.css"
-        >
-    </head>
+>
+
+<link
+    rel="stylesheet"
+    href="/static/css/user_message.css"
+>
+
+</head>
 
 
     <body
@@ -4051,6 +4057,8 @@ def document(
 <script src="/static/js/feedback.js"></script>
 <script src="/static/js/search_chats.js"></script>
 <script src="/static/js/regenerate.js"></script>
+<script src="/static/js/new_chat.js"></script>
+
 
 </body>
 
