@@ -7,14 +7,24 @@ from pathlib import Path
 
 import numpy as np
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 
+from auth_routes import router as auth_router
 from bm25_search import build_bm25
+from database import init_db
 from semantic_search import MODEL_NAME, load_data
+from chat_routes import router as chat_router
+from auth import get_logged_in_user
 
+from chat_service import (
+    save_compare_chat,
+    save_rag_chat,
+)
 
 # ============================================================
 # CONFIGURATION
@@ -22,41 +32,26 @@ from semantic_search import MODEL_NAME, load_data
 
 load_dotenv()
 
-APP_TITLE = "FastAPI Docs Assistant"
+APP_TITLE = "FastAPI Assistant"
 TOP_K = 5
 LLM_MODEL = "gpt-6-luna"
 
 BASE_DIR = Path(__file__).resolve().parent
-
-RESULTS_FILE = (
-    BASE_DIR
-    / "results"
-    / "final_results_summary.json"
-)
-
-GRAPHS_DIR = (
-    BASE_DIR
-    / "results"
-    / "graphs"
-)
+RESULTS_FILE = BASE_DIR / "results" / "final_results_summary.json"
+GRAPHS_DIR = BASE_DIR / "results" / "graphs"
 
 
 # ============================================================
-# LOAD RAG COMPONENTS ONCE
+# LOAD RAG COMPONENTS
 # ============================================================
 
 print("Loading FastAPI documentation corpus...")
-
 chunks, embeddings = load_data()
 
 print("Loading semantic embedding model...")
-
-embedding_model = SentenceTransformer(
-    MODEL_NAME
-)
+embedding_model = SentenceTransformer(MODEL_NAME)
 
 print("Building BM25 index...")
-
 bm25_index = build_bm25(chunks)
 
 print("RAG system ready.")
@@ -65,27 +60,44 @@ print("RAG system ready.")
 api_key = os.getenv("OPENAI_API_KEY")
 
 if not api_key:
-    print(
-        "WARNING: OPENAI_API_KEY "
-        "was not found in .env"
-    )
+    print("WARNING: OPENAI_API_KEY was not found in .env")
 
-client = OpenAI(
-    api_key=api_key
-)
+client = OpenAI(api_key=api_key)
 
 
 # ============================================================
-# FASTAPI APP
+# FASTAPI
 # ============================================================
 
 app = FastAPI(
     title=APP_TITLE,
-    description=(
-        "RAG-based technical documentation "
-        "assistant for FastAPI."
-    ),
+    description="RAG-based FastAPI documentation assistant.",
 )
+
+SESSION_SECRET = os.getenv("SESSION_SECRET")
+
+if not SESSION_SECRET:
+    raise RuntimeError(
+        "SESSION_SECRET was not found in .env"
+    )
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=SESSION_SECRET,
+    same_site="lax",
+    https_only=False,
+)
+
+init_db()
+
+app.mount(
+    "/static",
+    StaticFiles(directory=BASE_DIR / "static"),
+    name="static",
+)
+
+app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 # ============================================================
@@ -105,17 +117,12 @@ def semantic_search(
 ):
     start = time.perf_counter()
 
-    query_embedding = (
-        embedding_model.encode(
-            query,
-            normalize_embeddings=True,
-        )
+    query_embedding = embedding_model.encode(
+        query,
+        normalize_embeddings=True,
     )
 
-    scores = (
-        embeddings
-        @ query_embedding
-    )
+    scores = embeddings @ query_embedding
 
     ranked_indices = np.argsort(
         scores
@@ -146,10 +153,8 @@ def bm25_search(
 ):
     start = time.perf_counter()
 
-    query_tokens = tokenize(query)
-
     scores = bm25_index.get_scores(
-        query_tokens
+        tokenize(query)
     )
 
     ranked_indices = np.argsort(
@@ -176,7 +181,7 @@ def bm25_search(
 
 
 # ============================================================
-# BUILD LLM CONTEXT
+# CONTEXT
 # ============================================================
 
 def build_context(
@@ -189,6 +194,7 @@ def build_context(
     next_source_number = 1
 
     for chunk in retrieved_chunks:
+
         url = str(
             chunk.get(
                 "url",
@@ -197,6 +203,7 @@ def build_context(
         )
 
         if url not in source_numbers:
+
             source_numbers[url] = (
                 next_source_number
             )
@@ -229,32 +236,22 @@ def build_context(
 
             next_source_number += 1
 
-        source_number = (
-            source_numbers[url]
-        )
+        source_number = source_numbers[url]
 
-        current_score = float(
+        score = float(
             chunk.get(
                 "retrieval_score",
                 0,
             )
         )
 
-        previous_score = (
-            source_data[
-                source_number
-            ]["score"]
-        )
+        if score > source_data[
+            source_number
+        ]["score"]:
 
-        if (
-            current_score
-            > previous_score
-        ):
             source_data[
                 source_number
-            ]["score"] = (
-                current_score
-            )
+            ]["score"] = score
 
         title = str(
             chunk.get(
@@ -295,17 +292,18 @@ def build_context(
 
 
 # ============================================================
-# LLM ANSWER GENERATION
+# AI ANSWER
 # ============================================================
 
 def generate_answer(
     question,
     retrieved_chunks,
 ):
-    context, source_data = (
-        build_context(
-            retrieved_chunks
-        )
+    (
+        context,
+        source_data,
+    ) = build_context(
+        retrieved_chunks
     )
 
     prompt = f"""
@@ -357,8 +355,7 @@ FastAPI documentation:
 
     if not answer:
         answer = (
-            "The model did not return an "
-            "answer for this request."
+            "The model did not return an answer."
         )
 
     return (
@@ -368,29 +365,25 @@ FastAPI documentation:
     )
 
 
-# ============================================================
-# RUN ONE COMPLETE RAG REQUEST
-# ============================================================
-
 def run_rag(
     question,
     method,
 ):
-    total_start = (
-        time.perf_counter()
-    )
+    total_start = time.perf_counter()
 
     if method == "bm25":
+
         (
             retrieved_chunks,
             retrieval_ms,
-        ) = bm25_search(question)
-
-        label = (
-            "BM25 Keyword Search"
+        ) = bm25_search(
+            question
         )
 
+        label = "BM25 Keyword Search"
+
     else:
+
         (
             retrieved_chunks,
             retrieval_ms,
@@ -398,9 +391,7 @@ def run_rag(
             question
         )
 
-        label = (
-            "Semantic / Vector Search"
-        )
+        label = "Semantic / Vector Search"
 
     (
         answer,
@@ -417,26 +408,13 @@ def run_rag(
     ) * 1000
 
     return {
-        "method":
-            method,
-
-        "label":
-            label,
-
-        "answer":
-            answer,
-
-        "sources":
-            source_data,
-
-        "retrieval_ms":
-            retrieval_ms,
-
-        "generation_ms":
-            generation_ms,
-
-        "total_ms":
-            total_ms,
+        "method": method,
+        "label": label,
+        "answer": answer,
+        "sources": source_data,
+        "retrieval_ms": retrieval_ms,
+        "generation_ms": generation_ms,
+        "total_ms": total_ms,
     }
 
 
@@ -444,17 +422,17 @@ def run_rag(
 # ANSWER FORMATTING
 # ============================================================
 
-def format_text_section(text):
+def format_text_section(
+    text
+):
     escaped = html.escape(text)
 
-    # Inline code
     escaped = re.sub(
         r"`([^`\n]+)`",
         r"<code>\1</code>",
         escaped,
     )
 
-    # Source citations
     escaped = re.sub(
         r"\[Source (\d+)\]",
         (
@@ -471,53 +449,48 @@ def format_text_section(text):
     in_list = False
 
     for line in lines:
+
         stripped = line.strip()
 
         if not stripped:
-            if in_list:
-                output.append(
-                    "</ul>"
-                )
 
+            if in_list:
+                output.append("</ul>")
                 in_list = False
 
             continue
 
-        # Markdown heading
-        heading_match = re.match(
+        heading = re.match(
             r"^#{1,4}\s+(.+)$",
             stripped,
         )
 
-        if heading_match:
-            if in_list:
-                output.append(
-                    "</ul>"
-                )
+        if heading:
 
+            if in_list:
+                output.append("</ul>")
                 in_list = False
 
             output.append(
                 (
                     '<h3 class="answer-subheading">'
-                    f"{heading_match.group(1)}"
+                    f"{heading.group(1)}"
                     "</h3>"
                 )
             )
 
             continue
 
-        # Bold markdown
         stripped = re.sub(
             r"\*\*(.+?)\*\*",
             r"<strong>\1</strong>",
             stripped,
         )
 
-        # Bullet list
         if stripped.startswith(
             ("- ", "* ")
         ):
+
             if not in_list:
                 output.append(
                     '<ul class="answer-list">'
@@ -526,22 +499,18 @@ def format_text_section(text):
                 in_list = True
 
             output.append(
-                (
-                    "<li>"
-                    f"{stripped[2:]}"
-                    "</li>"
-                )
+                f"<li>{stripped[2:]}</li>"
             )
 
             continue
 
-        # Numbered list
         numbered = re.match(
             r"^\d+\.\s+(.+)$",
             stripped,
         )
 
         if numbered:
+
             if not in_list:
                 output.append(
                     '<ul class="answer-list">'
@@ -550,20 +519,13 @@ def format_text_section(text):
                 in_list = True
 
             output.append(
-                (
-                    "<li>"
-                    f"{numbered.group(1)}"
-                    "</li>"
-                )
+                f"<li>{numbered.group(1)}</li>"
             )
 
             continue
 
         if in_list:
-            output.append(
-                "</ul>"
-            )
-
+            output.append("</ul>")
             in_list = False
 
         output.append(
@@ -571,14 +533,14 @@ def format_text_section(text):
         )
 
     if in_list:
-        output.append(
-            "</ul>"
-        )
+        output.append("</ul>")
 
     return "\n".join(output)
 
 
-def format_answer(answer):
+def format_answer(
+    answer
+):
     parts = re.split(
         (
             r"```(?:[\w+-]+)?"
@@ -594,11 +556,12 @@ def format_answer(answer):
     for index, part in enumerate(
         parts
     ):
+
         if not part.strip():
             continue
 
-        # Code block
         if index % 2 == 1:
+
             code = html.escape(
                 part.strip()
             )
@@ -629,6 +592,7 @@ def format_answer(answer):
             )
 
         else:
+
             formatted.append(
                 format_text_section(
                     part
@@ -640,7 +604,9 @@ def format_answer(answer):
     )
 
 
-def extract_cited_sources(answer):
+def extract_cited_sources(
+    answer
+):
     citations = re.findall(
         r"\[Source (\d+)\]",
         answer,
@@ -656,7 +622,7 @@ def extract_cited_sources(answer):
 
 
 # ============================================================
-# SOURCE CARDS
+# SOURCES
 # ============================================================
 
 def build_source_cards(
@@ -666,13 +632,10 @@ def build_source_cards(
 ):
     cards = []
 
-    cited_numbers = (
-        extract_cited_sources(
-            answer
-        )
-    )
+    for number in extract_cited_sources(
+        answer
+    ):
 
-    for number in cited_numbers:
         source = source_data.get(
             number
         )
@@ -691,7 +654,6 @@ def build_source_cards(
             score_text = (
                 f"{score:.3f} similarity"
             )
-
         else:
             score_text = (
                 f"{score:.2f} BM25 score"
@@ -742,11 +704,11 @@ def build_source_cards(
                 </strong>
 
                 <small>
-                    {source_url}
+                    fastapi.tiangolo.com
                 </small>
 
                 <span class="source-link">
-                    Open documentation ↗
+                    Open source ↗
                 </span>
 
             </a>
@@ -755,9 +717,8 @@ def build_source_cards(
 
     if not cards:
         return """
-        <div class="empty-card">
-            The answer did not contain
-            any source citations.
+        <div class="empty-source">
+            No cited sources.
         </div>
         """
 
@@ -765,42 +726,37 @@ def build_source_cards(
 
 
 # ============================================================
-# FRIENDLY ERROR MESSAGES
+# ERRORS
 # ============================================================
 
-def friendly_error(exception):
-    message = str(exception).lower()
+def friendly_error(
+    exception
+):
+    message = str(
+        exception
+    ).lower()
 
     if (
-        "insufficient_quota"
-        in message
-        or "quota"
-        in message
-        or "billing"
-        in message
+        "quota" in message
+        or "billing" in message
     ):
         return (
-            "The AI service currently has "
-            "no available API credit."
+            "The AI service currently "
+            "has no available API credit."
         )
 
     if (
-        "rate limit"
-        in message
-        or "rate_limit"
-        in message
+        "rate limit" in message
+        or "rate_limit" in message
     ):
         return (
-            "The AI service is receiving "
-            "too many requests. "
+            "The AI service is busy. "
             "Please try again."
         )
 
     if (
-        "timeout"
-        in message
-        or "timed out"
-        in message
+        "timeout" in message
+        or "timed out" in message
     ):
         return (
             "The request took too long. "
@@ -808,34 +764,30 @@ def friendly_error(exception):
         )
 
     if (
-        "api key"
-        in message
-        or "authentication"
-        in message
-        or "unauthorized"
-        in message
+        "api key" in message
+        or "authentication" in message
+        or "unauthorized" in message
     ):
         return (
-            "The AI service could not "
-            "authenticate. Check the "
-            "server configuration."
+            "The AI service could "
+            "not authenticate."
         )
 
     if "connection" in message:
         return (
-            "The assistant could not connect "
-            "to the AI service. "
-            "Please try again."
+            "The assistant could not "
+            "connect to the AI service."
         )
 
     return (
-        "The assistant could not complete "
-        "this request. Please try again."
+        "The assistant could not "
+        "complete this request. "
+        "Please try again."
     )
 
 
 # ============================================================
-# RESULT CARD
+# ANSWER CARD
 # ============================================================
 
 def result_card(
@@ -847,12 +799,10 @@ def result_card(
         result["answer"]
     )
 
-    sources_html = (
-        build_source_cards(
-            result["answer"],
-            result["sources"],
-            result["method"],
-        )
+    sources_html = build_source_cards(
+        result["answer"],
+        result["sources"],
+        result["method"],
     )
 
     compact_class = (
@@ -861,9 +811,6 @@ def result_card(
         else ""
     )
 
-    # Format numbers BEFORE HTML.
-    # This avoids the previous
-    # ValueError formatting bug.
     retrieval_time = (
         f'{result["retrieval_ms"]:.1f} ms'
     )
@@ -877,7 +824,9 @@ def result_card(
     )
 
     method_label = html.escape(
-        str(result["label"])
+        str(
+            result["label"]
+        )
     )
 
     return f"""
@@ -885,68 +834,43 @@ def result_card(
         class="answer-card{compact_class}"
     >
 
-        <div class="answer-heading">
+        <div class="answer-header">
 
             <div>
 
-                <span class="eyebrow">
+                <span class="small-label">
                     Retrieval method
                 </span>
 
-                <h2>
+                <strong>
                     {method_label}
-                </h2>
-
-            </div>
-
-            <button
-                type="button"
-                class="outline-button"
-                onclick="copyAnswer('{card_id}', this)"
-            >
-                Copy answer
-            </button>
-
-        </div>
-
-
-        <div class="stats">
-
-            <div class="stat">
-
-                <span>
-                    Retrieval
-                </span>
-
-                <strong>
-                    {retrieval_time}
                 </strong>
 
             </div>
 
 
-            <div class="stat">
+            <div class="answer-actions">
 
-                <span>
-                    Generation
-                </span>
+                <button
+                    type="button"
+                    onclick="
+                        copyAnswer(
+                            '{card_id}',
+                            this
+                        )
+                    "
+                >
+                    Copy
+                </button>
 
-                <strong>
-                    {generation_time}
-                </strong>
-
-            </div>
-
-
-            <div class="stat">
-
-                <span>
-                    Total response
-                </span>
-
-                <strong>
-                    {total_time}
-                </strong>
+                <button
+                    type="button"
+                    onclick="
+                        regenerateLastQuestion()
+                    "
+                >
+                    Regenerate
+                </button>
 
             </div>
 
@@ -961,23 +885,32 @@ def result_card(
         </div>
 
 
+        <div class="performance-row">
+
+            <span>
+                Retrieval {retrieval_time}
+            </span>
+
+            <span>
+                Generation {generation_time}
+            </span>
+
+            <span>
+                Total {total_time}
+            </span>
+
+        </div>
+
+
         <div class="sources-block">
 
             <div class="sources-heading">
 
-                <div>
+                <strong>
+                    Sources
+                </strong>
 
-                    <span class="eyebrow">
-                        Evidence
-                    </span>
-
-                    <h3>
-                        Cited documentation
-                    </h3>
-
-                </div>
-
-                <span class="official-badge">
+                <span>
                     Official FastAPI docs
                 </span>
 
@@ -989,12 +922,50 @@ def result_card(
 
         </div>
 
+
+        <div class="feedback-row">
+
+            <span>
+                Was this answer useful?
+            </span>
+
+            <button
+                type="button"
+                class="feedback-button"
+                onclick="
+                    setHelpful(
+                        this,
+                        'yes'
+                    )
+                "
+            >
+                👍 Yes
+            </button>
+
+            <button
+                type="button"
+                class="feedback-button"
+                onclick="
+                    setHelpful(
+                        this,
+                        'no'
+                    )
+                "
+            >
+                👎 No
+            </button>
+
+            <span class="feedback-thanks">
+            </span>
+
+        </div>
+
     </article>
     """
 
 
 # ============================================================
-# COMPARE MODE SUMMARY
+# COMPARE MODE
 # ============================================================
 
 def compare_summary_card(
@@ -1002,184 +973,107 @@ def compare_summary_card(
     bm25_result,
 ):
     semantic_retrieval = float(
-        semantic_result["retrieval_ms"]
+        semantic_result[
+            "retrieval_ms"
+        ]
     )
 
     bm25_retrieval = float(
-        bm25_result["retrieval_ms"]
+        bm25_result[
+            "retrieval_ms"
+        ]
     )
 
     semantic_total = float(
-        semantic_result["total_ms"]
+        semantic_result[
+            "total_ms"
+        ]
     )
 
     bm25_total = float(
-        bm25_result["total_ms"]
+        bm25_result[
+            "total_ms"
+        ]
     )
 
-    semantic_citations = len(
+    semantic_sources = len(
         extract_cited_sources(
-            semantic_result["answer"]
+            semantic_result[
+                "answer"
+            ]
         )
     )
 
-    bm25_citations = len(
+    bm25_sources = len(
         extract_cited_sources(
-            bm25_result["answer"]
+            bm25_result[
+                "answer"
+            ]
         )
     )
 
     if semantic_retrieval < bm25_retrieval:
         retrieval_winner = "Semantic"
-        retrieval_difference = (
-            bm25_retrieval
-            - semantic_retrieval
-        )
+
     elif bm25_retrieval < semantic_retrieval:
         retrieval_winner = "BM25"
-        retrieval_difference = (
-            semantic_retrieval
-            - bm25_retrieval
-        )
+
     else:
         retrieval_winner = "Tie"
-        retrieval_difference = 0.0
 
     if semantic_total < bm25_total:
         total_winner = "Semantic"
-        total_difference = (
-            bm25_total
-            - semantic_total
-        ) / 1000
+
     elif bm25_total < semantic_total:
         total_winner = "BM25"
-        total_difference = (
-            semantic_total
-            - bm25_total
-        ) / 1000
+
     else:
         total_winner = "Tie"
-        total_difference = 0.0
-
-    retrieval_difference_text = (
-        f"{retrieval_difference:.1f} ms"
-    )
-
-    total_difference_text = (
-        f"{total_difference:.2f} s"
-    )
 
     return f"""
-    <div class="comparison-summary">
+    <section class="compare-summary">
 
-        <div class="comparison-title">
-
-            <div>
-
-                <span class="eyebrow">
-                    Live comparison
-                </span>
-
-                <h3>
-                    Comparison summary
-                </h3>
-
-            </div>
-
-            <span class="comparison-note">
-                Same question · Same corpus ·
-                Same language model
+        <div>
+            <span>
+                Faster retrieval
             </span>
 
+            <strong>
+                {retrieval_winner}
+            </strong>
         </div>
 
-
-        <div class="comparison-metrics">
-
-            <div class="comparison-metric">
-
-                <span>
-                    Faster retrieval
-                </span>
-
-                <strong>
-                    {retrieval_winner}
-                </strong>
-
-                <small>
-                    by {retrieval_difference_text}
-                </small>
-
-            </div>
-
-
-            <div class="comparison-metric">
-
-                <span>
-                    Faster total response
-                </span>
-
-                <strong>
-                    {total_winner}
-                </strong>
-
-                <small>
-                    by {total_difference_text}
-                </small>
-
-            </div>
-
-
-            <div class="comparison-metric">
-
-                <span>
-                    Semantic citations
-                </span>
-
-                <strong>
-                    {semantic_citations}
-                </strong>
-
-                <small>
-                    cited documentation sources
-                </small>
-
-            </div>
-
-
-            <div class="comparison-metric">
-
-                <span>
-                    BM25 citations
-                </span>
-
-                <strong>
-                    {bm25_citations}
-                </strong>
-
-                <small>
-                    cited documentation sources
-                </small>
-
-            </div>
-
-        </div>
-
-
-        <div class="comparison-warning">
+        <div>
+            <span>
+                Faster total response
+            </span>
 
             <strong>
-                Important:
+                {total_winner}
             </strong>
-
-            Faster does not automatically mean
-            more accurate. Retrieval quality,
-            source relevance, and answer correctness
-            should also be considered.
-
         </div>
 
-    </div>
+        <div>
+            <span>
+                Semantic sources
+            </span>
+
+            <strong>
+                {semantic_sources}
+            </strong>
+        </div>
+
+        <div>
+            <span>
+                BM25 sources
+            </span>
+
+            <strong>
+                {bm25_sources}
+            </strong>
+        </div>
+
+    </section>
     """
 
 
@@ -1187,41 +1081,105 @@ def compare_summary_card(
 # CSS
 # ============================================================
 
-CSS = """
+CSS = r"""
 * {
     box-sizing: border-box;
 }
 
 :root {
-    --background: #06111f;
-    --background-two: #081727;
+    --page: #0b0c10;
+    --sidebar: #111217;
 
-    --panel: #0d1b2d;
-    --panel-two: #12243a;
+    --surface: #17181e;
+    --surface-2: #1d1f27;
+    --surface-3: #242731;
+
+    --text: #f4f4f5;
+    --muted: #9b9da6;
 
     --border:
-        rgba(148, 163, 184, 0.16);
+        rgba(
+            255,
+            255,
+            255,
+            0.08
+        );
 
-    --text: #f8fafc;
-    --muted: #94a3b8;
+    --accent: #8b72ff;
+    --accent-2: #a394ff;
 
-    --cyan: #22d3ee;
-    --teal: #14b8a6;
-    --blue: #3b82f6;
-    --indigo: #6366f1;
+    --accent-soft:
+        rgba(
+            139,
+            114,
+            255,
+            0.13
+        );
 
-    --green: #34d399;
-    --danger: #fb7185;
+    --accent-border:
+        rgba(
+            139,
+            114,
+            255,
+            0.34
+        );
+
+    --danger: #ff7d8d;
 }
 
-html {
-    scroll-behavior: smooth;
+body[data-theme="light"] {
+    --page: #ffffff;
+    --sidebar: #f7f7f8;
+
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --surface-3: #ececf0;
+
+    --text: #18181b;
+    --muted: #686b75;
+
+    --border:
+        rgba(
+            24,
+            24,
+            27,
+            0.09
+        );
+
+    --accent: #6f5bd3;
+    --accent-2: #7f6ee0;
+
+    --accent-soft:
+        rgba(
+            111,
+            91,
+            211,
+            0.09
+        );
+
+    --accent-border:
+        rgba(
+            111,
+            91,
+            211,
+            0.25
+        );
+}
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
 }
 
 body {
-    margin: 0;
-
     min-height: 100vh;
+
+    background:
+        var(--page);
+
+    color:
+        var(--text);
 
     font-family:
         Inter,
@@ -1231,112 +1189,96 @@ body {
         BlinkMacSystemFont,
         "Segoe UI",
         sans-serif;
-
-    color: var(--text);
-
-    background:
-        radial-gradient(
-            circle at 15% 5%,
-            rgba(34, 211, 238, 0.12),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 90% 10%,
-            rgba(99, 102, 241, 0.11),
-            transparent 30%
-        ),
-        linear-gradient(
-            180deg,
-            #06111f 0%,
-            #071422 100%
-        );
-
-    line-height: 1.6;
 }
 
-body::before {
-    content: "";
-
-    position: fixed;
-    inset: 0;
-
-    pointer-events: none;
-
-    background-image:
-        linear-gradient(
-            rgba(255,255,255,0.017) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,0.017) 1px,
-            transparent 1px
-        );
-
-    background-size:
-        48px 48px;
-
-    mask-image:
-        linear-gradient(
-            to bottom,
-            rgba(0,0,0,.45),
-            transparent 80%
-        );
-}
-
-a {
-    color: inherit;
+body.empty-chat {
+    overflow: hidden;
 }
 
 button,
 textarea,
-select {
+select,
+input {
     font: inherit;
+    color: inherit;
 }
 
 button {
-    transition:
-        transform .18s ease,
-        border-color .18s ease,
-        background .18s ease,
-        color .18s ease;
+    cursor: pointer;
 }
 
-.container {
-    width:
-        min(
-            1180px,
-            calc(100% - 36px)
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+
+/* ============================================================
+   LAYOUT
+============================================================ */
+
+.app-shell {
+    min-height: 100vh;
+
+    display: grid;
+
+    grid-template-columns:
+        260px
+        minmax(
+            0,
+            1fr
         );
-
-    margin:
-        0 auto;
 }
 
+.sidebar {
+    position: fixed;
 
-/* ==========================================================
-   NAVIGATION
-========================================================== */
-
-nav {
-    position: sticky;
-
-    top: 0;
+    inset:
+        0 auto 0 0;
 
     z-index: 50;
 
-    border-bottom:
-        1px solid var(--border);
+    width: 260px;
+    height: 100vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+    padding: 12px;
+
+    border-right:
+        1px solid
+        var(--border);
 
     background:
-        rgba(6, 17, 31, 0.88);
-
-    backdrop-filter:
-        blur(18px);
+        var(--sidebar);
 }
 
-.nav-inner {
-    min-height: 72px;
+.main-shell {
+    grid-column: 2;
+
+    min-width: 0;
+
+    min-height: 100vh;
+
+    background:
+        var(--page);
+}
+
+body.empty-chat
+.main-shell {
+    height: 100vh;
+    overflow: hidden;
+}
+
+
+/* ============================================================
+   SIDEBAR
+============================================================ */
+
+.sidebar-head {
+    min-height: 46px;
 
     display: flex;
 
@@ -1345,796 +1287,629 @@ nav {
     justify-content:
         space-between;
 
-    gap: 20px;
+    padding:
+        0 7px 8px;
 }
 
-.brand {
+.sidebar-name {
+    font-size: 17px;
+
+    font-weight: 700;
+
+    letter-spacing:
+        -0.02em;
+}
+
+.sidebar-icon-button {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+
+    place-items: center;
+
+    border: 0;
+
+    border-radius: 9px;
+
+    background:
+        transparent;
+
+    color:
+        var(--muted);
+
+    font-size: 19px;
+}
+
+.sidebar-icon-button:hover {
+    background:
+        var(--surface-2);
+
+    color:
+        var(--text);
+}
+
+.side-nav {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+}
+
+.side-action,
+.side-link,
+.history-item {
+    width: 100%;
+
+    min-height: 42px;
+
     display: flex;
 
     align-items: center;
 
     gap: 11px;
 
-    color: inherit;
+    padding:
+        0 11px;
 
-    text-decoration: none;
+    border: 0;
+
+    border-radius: 10px;
+
+    background:
+        transparent;
+
+    color:
+        var(--text);
+
+    text-align: left;
+
+    font-size: 13px;
 }
 
-.logo {
-    width: 40px;
-    height: 40px;
+.side-action:hover,
+.side-link:hover,
+.history-item:hover,
+.side-action.active {
+    background:
+        var(--surface-2);
+}
+
+.side-symbol {
+    width: 20px;
+
+    flex:
+        0 0 20px;
+
+    color:
+        var(--muted);
+
+    text-align: center;
+}
+
+.side-section-title {
+    padding:
+        18px 11px 7px;
+
+    color:
+        var(--muted);
+
+    font-size: 11px;
+
+    font-weight: 650;
+}
+
+.chat-search {
+    display: none;
+
+    padding:
+        6px 4px 8px;
+}
+
+.chat-search.open {
+    display: block;
+}
+
+.chat-search input {
+    width: 100%;
+
+    padding:
+        10px 11px;
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius: 10px;
+
+    outline: 0;
+
+    background:
+        var(--surface);
+}
+
+.chat-search input:focus {
+    border-color:
+        var(--accent-border);
+}
+
+.history-list {
+    min-height: 0;
+
+    overflow-y: auto;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+}
+
+.history-item {
+    display: block;
+
+    overflow: hidden;
+
+    text-overflow:
+        ellipsis;
+
+    white-space:
+        nowrap;
+}
+
+.history-empty {
+    padding:
+        10px 11px;
+
+    color:
+        var(--muted);
+
+    font-size: 12px;
+}
+
+.sidebar-bottom {
+    margin-top: auto;
+
+    padding-top: 9px;
+
+    border-top:
+        1px solid
+        var(--border);
+}
+
+.profile-row {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 8px;
+
+    border-radius: 10px;
+}
+
+.profile-row:hover {
+    background:
+        var(--surface-2);
+}
+
+.profile-avatar {
+    width: 30px;
+    height: 30px;
 
     display: grid;
 
     place-items: center;
 
-    flex-shrink: 0;
-
-    border-radius: 12px;
-
-    color: #04141a;
-
-    font-size: 13px;
-
-    font-weight: 900;
+    border-radius: 50%;
 
     background:
-        linear-gradient(
-            135deg,
-            var(--cyan),
-            var(--teal)
-        );
-
-    box-shadow:
-        0 0 30px
-        rgba(34, 211, 238, .18);
-}
-
-.brand-text {
-    display: flex;
-
-    flex-direction: column;
-
-    line-height: 1.25;
-}
-
-.brand-text strong {
-    font-size: 14px;
-}
-
-.brand-text span {
-    margin-top: 2px;
-
-    color: var(--muted);
-
-    font-size: 10px;
-}
-
-.nav-links {
-    display: flex;
-
-    gap: 5px;
-}
-
-.nav-links a {
-    padding:
-        8px 11px;
-
-    border-radius: 9px;
-
-    color: #cbd5e1;
-
-    text-decoration: none;
-
-    font-size: 12px;
-}
-
-.nav-links a:hover {
-    color: #cffafe;
-
-    background:
-        rgba(34, 211, 238, .07);
-}
-
-
-/* ==========================================================
-   HERO
-========================================================== */
-
-.hero {
-    padding:
-        72px 0 38px;
-}
-
-.hero-content {
-    max-width: 850px;
-
-    margin:
-        0 auto;
-
-    text-align: center;
-}
-
-.pill {
-    display: inline-flex;
-
-    padding:
-        7px 12px;
-
-    margin-bottom: 20px;
-
-    border:
-        1px solid
-        rgba(34, 211, 238, .18);
-
-    border-radius: 999px;
-
-    color: #a5f3fc;
-
-    background:
-        rgba(34, 211, 238, .06);
+        var(--surface-3);
 
     font-size: 11px;
 
     font-weight: 700;
 }
 
-.hero h1 {
-    margin:
-        0 0 18px;
+.profile-copy {
+    min-width: 0;
 
-    font-size:
-        clamp(
-            38px,
-            7vw,
-            68px
-        );
-
-    line-height: 1.05;
-
-    letter-spacing: -.05em;
+    flex: 1;
 }
 
-.gradient {
-    color: transparent;
+.profile-copy strong {
+    display: block;
 
-    background:
-        linear-gradient(
-            90deg,
-            #67e8f9,
-            #5eead4,
-            #818cf8
-        );
-
-    background-clip: text;
-
-    -webkit-background-clip: text;
+    font-size: 12px;
 }
 
-.hero-description {
-    max-width: 700px;
+.profile-copy span {
+    display: block;
 
-    margin:
-        0 auto 35px;
+    margin-top: 1px;
 
-    color: #cbd5e1;
+    color:
+        var(--muted);
 
-    font-size: 17px;
+    font-size: 9px;
 }
 
 
-/* ==========================================================
-   SEARCH
-========================================================== */
+/* ============================================================
+   TOPBAR
+============================================================ */
 
-.search-panel {
-    max-width: 920px;
+.topbar {
+    position: sticky;
 
-    margin:
-        0 auto;
+    top: 0;
 
-    padding: 7px;
+    z-index: 30;
 
-    border-radius: 23px;
+    height: 56px;
 
-    background:
-        linear-gradient(
-            135deg,
-            rgba(34, 211, 238, .18),
-            rgba(99, 102, 241, .11)
-        );
-
-    box-shadow:
-        0 30px 80px
-        rgba(0,0,0,.24);
-}
-
-.search-inner {
-    padding: 24px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.06);
-
-    border-radius: 18px;
-
-    background:
-        rgba(10,23,39,.98);
-}
-
-.search-row {
     display: flex;
+
+    align-items: center;
 
     justify-content:
         space-between;
 
-    align-items: center;
-
-    gap: 14px;
-
-    margin-bottom: 14px;
-}
-
-.search-label {
-    color: #cbd5e1;
-
-    font-size: 13px;
-
-    font-weight: 700;
-}
-
-select {
-    min-width: 220px;
+    gap: 16px;
 
     padding:
-        10px 12px;
+        0 18px;
+
+    border-bottom:
+        1px solid
+        var(--border);
+
+    background:
+        var(--page);
+}
+
+body.empty-chat
+.topbar {
+    position: relative;
+}
+
+.topbar-left {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    min-width: 0;
+}
+
+.topbar-title {
+    font-size: 13px;
+
+    font-weight: 650;
+
+    white-space: nowrap;
+}
+
+.topbar-right {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-end;
+
+    flex-wrap: nowrap;
+
+    gap: 6px;
+
+    white-space: nowrap;
+}
+
+
+/* Search and theme */
+
+.top-button {
+    height: 34px;
+
+    padding:
+        0 10px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
 
     border:
-        1px solid var(--border);
+        1px solid
+        transparent;
 
     border-radius: 10px;
 
-    outline: none;
+    background:
+        transparent;
 
-    cursor: pointer;
+    color:
+        var(--muted);
 
-    color: #e2e8f0;
+    font-size: 11px;
+
+    text-decoration: none;
+
+    white-space: nowrap;
+}
+
+.top-button:hover {
+    background:
+        var(--surface-2);
+
+    color:
+        var(--text);
+}
+
+
+/* Sign in pill */
+
+.signin-top {
+    padding:
+        0 14px;
+
+    border-color:
+        var(--accent-border);
 
     background:
-        var(--panel-two);
+        var(--accent-soft);
+
+    color:
+        var(--accent-2);
+
+    font-weight: 650;
 }
 
-select:focus {
+.signin-top:hover {
     border-color:
-        rgba(34,211,238,.5);
-}
+        var(--accent);
 
-textarea {
-    width: 100%;
-
-    min-height: 145px;
-
-    resize: vertical;
-
-    padding: 17px;
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 15px;
-
-    outline: none;
+    background:
+        var(--accent);
 
     color: white;
+}
+
+
+/* Mobile hamburger only */
+
+.mobile-menu {
+    display: none;
+
+    width: 34px;
+    height: 34px;
+
+    padding: 0;
+
+    place-items: center;
+
+    border: 0;
+
+    border-radius: 9px;
 
     background:
-        rgba(255,255,255,.025);
+        transparent;
 
-    font-size: 15px;
+    color:
+        var(--text);
+
+    font-size: 18px;
+}
+
+.mobile-menu:hover {
+    background:
+        var(--surface-2);
+}
+
+
+/* ============================================================
+   CHAT AREA
+============================================================ */
+
+.chat-area {
+    width:
+        min(
+            820px,
+            calc(
+                100% - 40px
+            )
+        );
+
+    margin:
+        0 auto;
+
+    padding:
+        30px 0 200px;
+}
+
+
+/* No scrolling when empty */
+
+body.empty-chat
+.chat-area {
+    height:
+        calc(
+            100vh - 56px
+        );
+
+    padding:
+        0 0 150px;
+
+    display: grid;
+
+    place-items: center;
+
+    overflow: hidden;
+}
+
+.empty-state {
+    text-align: center;
+
+    transform:
+        translateY(
+            -38px
+        );
+}
+
+.empty-state h1 {
+    margin: 0;
+
+    font-size:
+        clamp(
+            32px,
+            4vw,
+            45px
+        );
+
+    font-weight: 500;
+
+    letter-spacing:
+        -0.04em;
+}
+
+.empty-state p {
+    max-width: 500px;
+
+    margin:
+        12px auto 0;
+
+    color:
+        var(--muted);
+
+    font-size: 13px;
 
     line-height: 1.6;
 }
 
-textarea:focus {
-    border-color:
-        rgba(34,211,238,.5);
 
-    box-shadow:
-        0 0 0 4px
-        rgba(34,211,238,.05);
-}
+/* ============================================================
+   USER MESSAGE
+============================================================ */
 
-textarea::placeholder {
-    color: #64748b;
-}
-
-.form-actions {
+.user-block {
     display: flex;
 
     justify-content:
-        space-between;
-
-    align-items: center;
-
-    gap: 12px;
-
-    margin-top: 14px;
-}
-
-.button-group {
-    display: flex;
-
-    gap: 8px;
-}
-
-.primary-button {
-    border: none;
-
-    padding:
-        12px 19px;
-
-    border-radius: 11px;
-
-    cursor: pointer;
-
-    color: #04151c;
-
-    font-weight: 800;
-
-    background:
-        linear-gradient(
-            135deg,
-            var(--cyan),
-            var(--teal)
-        );
-
-    box-shadow:
-        0 12px 30px
-        rgba(20,184,166,.18);
-}
-
-.primary-button:hover {
-    transform:
-        translateY(-1px);
-
-    filter:
-        brightness(1.06);
-}
-
-.outline-button {
-    padding:
-        9px 12px;
-
-    cursor: pointer;
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 9px;
-
-    color: #cbd5e1;
-
-    background:
-        rgba(255,255,255,.025);
-}
-
-.outline-button:hover {
-    color: #cffafe;
-
-    border-color:
-        rgba(34,211,238,.35);
-
-    background:
-        rgba(34,211,238,.05);
-}
-
-.hint {
-    color: var(--muted);
-
-    font-size: 11px;
-}
-
-
-/* ==========================================================
-   EXAMPLES + HISTORY
-========================================================== */
-
-.example-area {
-    margin-top: 17px;
-}
-
-.small-title {
-    margin-bottom: 9px;
-
-    color: var(--muted);
-
-    font-size: 11px;
-}
-
-.chips {
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 7px;
-}
-
-.chip {
-    border:
-        1px solid var(--border);
-
-    border-radius: 999px;
-
-    padding:
-        7px 11px;
-
-    cursor: pointer;
-
-    color: #cbd5e1;
-
-    background:
-        rgba(255,255,255,.02);
-
-    font-size: 11px;
-}
-
-.chip:hover {
-    color: #cffafe;
-
-    border-color:
-        rgba(34,211,238,.3);
-
-    background:
-        rgba(34,211,238,.05);
-}
-
-.history-area {
-    max-width: 920px;
-
-    margin:
-        18px auto 0;
-
-    padding: 15px;
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 14px;
-
-    background:
-        rgba(255,255,255,.018);
-}
-
-.history-header {
-    display: flex;
-
-    justify-content:
-        space-between;
-
-    align-items: center;
-
-    gap: 10px;
-
-    margin-bottom: 9px;
-}
-
-.history-header strong {
-    font-size: 12px;
-}
-
-.history-empty {
-    color: var(--muted);
-
-    font-size: 11px;
-}
-
-
-/* ==========================================================
-   RESULT AREA
-========================================================== */
-
-.results-section {
-    padding:
-        35px 0 80px;
-}
-
-.section-header {
-    display: flex;
-
-    justify-content:
-        space-between;
-
-    align-items:
         flex-end;
 
-    gap: 16px;
-
-    margin-bottom: 16px;
+    margin-bottom: 30px;
 }
 
-.eyebrow {
-    display: block;
-
-    margin-bottom: 4px;
-
-    color: #67e8f9;
-
-    font-size: 9px;
-
-    font-weight: 800;
-
-    text-transform: uppercase;
-
-    letter-spacing: .14em;
-}
-
-.section-header h2,
-.answer-heading h2 {
-    margin: 0;
-
-    font-size: 22px;
-
-    letter-spacing: -.025em;
-}
-
-.compare-layout {
-    display: grid;
-
-    grid-template-columns:
-        repeat(
-            2,
-            minmax(0,1fr)
+.user-message {
+    width:
+        min(
+            74%,
+            620px
         );
-
-    gap: 16px;
 }
 
-
-/* ==========================================================
-   ANSWER CARD
-========================================================== */
-
-.answer-card {
-    overflow: hidden;
-
-    margin-bottom: 18px;
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 18px;
-
-    background:
-        rgba(13,27,45,.95);
-
-    box-shadow:
-        0 20px 60px
-        rgba(0,0,0,.22);
-}
-
-.answer-heading {
-    padding: 17px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content:
-        space-between;
-
-    gap: 10px;
-
-    border-bottom:
-        1px solid var(--border);
-}
-
-.answer-card.compact
-.answer-heading h2 {
-    font-size: 17px;
-}
-
-.stats {
-    display: grid;
-
-    grid-template-columns:
-        repeat(3,1fr);
-
-    gap: 1px;
-
-    background:
-        var(--border);
-}
-
-.stat {
-    padding:
-        11px 13px;
-
-    background:
-        #0c1a2b;
-}
-
-.stat span {
-    display: block;
-
-    color: var(--muted);
-
-    font-size: 9px;
-}
-
-.stat strong {
-    color: #e2e8f0;
-
-    font-size: 12px;
-}
-
-.answer-content {
-    padding: 22px;
-
-    color: #dbeafe;
-
-    font-size: 14px;
-
-    line-height: 1.78;
-}
-
-.answer-content p {
+.user-label {
     margin:
-        0 0 14px;
-}
+        0 6px 6px 0;
 
-.answer-subheading {
-    margin:
-        22px 0 8px;
+    text-align: right;
 
-    color: #f1f5f9;
-
-    font-size: 15px;
-}
-
-.answer-list {
-    margin:
-        5px 0 16px;
-
-    padding-left: 22px;
-}
-
-.answer-list li {
-    margin-bottom: 7px;
-}
-
-.answer-content code {
-    padding:
-        2px 5px;
-
-    border:
-        1px solid
-        rgba(34,211,238,.1);
-
-    border-radius: 5px;
-
-    color: #a5f3fc;
-
-    background:
-        rgba(34,211,238,.07);
-}
-
-.citation {
-    display: inline-block;
-
-    margin:
-        0 2px;
-
-    padding:
-        1px 6px;
-
-    border:
-        1px solid
-        rgba(34,211,238,.14);
-
-    border-radius: 999px;
-
-    color: #67e8f9;
-
-    background:
-        rgba(34,211,238,.07);
+    color:
+        var(--muted);
 
     font-size: 10px;
 
-    font-weight: 700;
+    font-weight: 650;
 }
 
-
-/* ==========================================================
-   CODE BLOCK
-========================================================== */
-
-.code-wrapper {
-    overflow: hidden;
-
-    margin:
-        18px 0;
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 11px;
-
-    background: #040b14;
-}
-
-.code-header {
+.user-bubble {
     padding:
-        8px 11px;
+        12px 15px;
 
+    border-radius:
+        18px
+        18px
+        4px
+        18px;
+
+    background:
+        var(--surface-2);
+
+    font-size: 13px;
+
+    line-height: 1.65;
+
+    white-space:
+        pre-wrap;
+}
+
+.user-reactions {
     display: flex;
 
     justify-content:
-        space-between;
+        flex-end;
 
-    align-items: center;
+    gap: 2px;
 
-    border-bottom:
-        1px solid var(--border);
-
-    color: var(--muted);
-
-    font-size: 10px;
+    margin-top: 5px;
 }
 
-.code-header button {
-    border:
-        1px solid var(--border);
+.user-reaction {
+    width: 28px;
+    height: 28px;
+
+    padding: 0;
+
+    border: 0;
 
     border-radius: 7px;
 
-    padding:
-        4px 8px;
+    background:
+        transparent;
 
-    cursor: pointer;
-
-    color: #cbd5e1;
-
-    background: transparent;
+    font-size: 14px;
 }
 
-pre {
-    overflow: auto;
-
-    margin: 0;
-
-    padding: 15px;
+.user-reaction:hover,
+.user-reaction.active {
+    background:
+        var(--surface-2);
 }
 
-pre code {
-    padding: 0 !important;
 
-    border: 0 !important;
+/* ============================================================
+   AI ANSWER
+============================================================ */
 
-    color: #d1fae5 !important;
+.assistant-block {
+    margin-bottom: 34px;
+}
+
+.assistant-label {
+    margin-bottom: 8px;
+
+    color:
+        var(--muted);
+
+    font-size: 10px;
+
+    font-weight: 650;
+}
+
+.answer-card {
+    border: 0;
 
     background:
-        transparent !important;
-
-    font-size: 12px;
-
-    line-height: 1.65;
+        transparent;
 }
 
-
-/* ==========================================================
-   SOURCES
-========================================================== */
-
-.sources-block {
-    padding:
-        0 18px 19px;
-}
-
-.sources-heading {
+.answer-header {
     display: flex;
 
-    align-items:
-        flex-end;
+    align-items: center;
 
     justify-content:
         space-between;
@@ -2144,28 +1919,256 @@ pre code {
     margin-bottom: 11px;
 }
 
-.sources-heading h3 {
-    margin: 0;
+.answer-header
+.small-label {
+    display: block;
 
-    font-size: 13px;
+    color:
+        var(--muted);
+
+    font-size: 8px;
+
+    text-transform:
+        uppercase;
+
+    letter-spacing:
+        .08em;
 }
 
-.official-badge {
+.answer-header strong {
+    display: block;
+
+    margin-top: 2px;
+
+    font-size: 12px;
+}
+
+.answer-actions {
+    display: flex;
+
+    gap: 5px;
+}
+
+.answer-actions button {
     padding:
-        5px 9px;
+        6px 9px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background:
+        transparent;
+
+    color:
+        var(--muted);
+
+    font-size: 9px;
+}
+
+.answer-actions button:hover {
+    background:
+        var(--surface-2);
+
+    color:
+        var(--text);
+}
+
+.answer-content {
+    font-size: 13px;
+
+    line-height: 1.82;
+}
+
+.answer-content p {
+    margin:
+        0 0 13px;
+}
+
+.answer-subheading {
+    margin:
+        18px 0 7px;
+
+    font-size: 14px;
+}
+
+.answer-list {
+    margin:
+        4px 0 14px;
+
+    padding-left: 20px;
+}
+
+.answer-list li {
+    margin-bottom: 6px;
+}
+
+.answer-content code {
+    padding:
+        2px 5px;
+
+    border-radius: 6px;
+
+    background:
+        var(--surface-2);
+}
+
+.citation {
+    display: inline-flex;
+
+    padding:
+        1px 6px;
 
     border:
         1px solid
-        rgba(52,211,153,.15);
+        var(--accent-border);
 
     border-radius: 999px;
 
-    color: #a7f3d0;
-
     background:
-        rgba(52,211,153,.05);
+        var(--accent-soft);
+
+    color:
+        var(--accent-2);
 
     font-size: 9px;
+
+    font-weight: 700;
+}
+
+.performance-row {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin:
+        12px 0 13px;
+
+    color:
+        var(--muted);
+
+    font-size: 8px;
+}
+
+
+/* ============================================================
+   CODE
+============================================================ */
+
+.code-wrapper {
+    overflow: hidden;
+
+    margin:
+        16px 0;
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius: 12px;
+
+    background:
+        #111216;
+}
+
+.code-header {
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    align-items: center;
+
+    padding:
+        7px 10px;
+
+    border-bottom:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            .08
+        );
+
+    color: #a5a7b0;
+
+    font-size: 9px;
+}
+
+.code-header button {
+    padding:
+        4px 7px;
+
+    border: 0;
+
+    border-radius: 6px;
+
+    background:
+        #20222a;
+
+    color:
+        #ececf0;
+
+    font-size: 8px;
+}
+
+pre {
+    margin: 0;
+
+    padding: 13px;
+
+    overflow: auto;
+}
+
+pre code {
+    padding:
+        0 !important;
+
+    border:
+        0 !important;
+
+    background:
+        transparent !important;
+
+    color:
+        #ececf0 !important;
+
+    font-size:
+        11px !important;
+}
+
+
+/* ============================================================
+   SOURCES
+============================================================ */
+
+.sources-block {
+    margin-top: 10px;
+}
+
+.sources-heading {
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    gap: 10px;
+
+    margin-bottom: 8px;
+}
+
+.sources-heading strong {
+    font-size: 10px;
+}
+
+.sources-heading span {
+    color:
+        var(--muted);
+
+    font-size: 8px;
 }
 
 .source-grid {
@@ -2174,10 +2177,13 @@ pre code {
     grid-template-columns:
         repeat(
             2,
-            minmax(0,1fr)
+            minmax(
+                0,
+                1fr
+            )
         );
 
-    gap: 9px;
+    gap: 7px;
 }
 
 .compact
@@ -2191,27 +2197,22 @@ pre code {
 
     display: block;
 
-    padding: 13px;
+    padding:
+        9px 10px;
 
     border:
-        1px solid var(--border);
+        1px solid
+        var(--border);
 
-    border-radius: 11px;
-
-    color: inherit;
-
-    text-decoration: none;
+    border-radius: 10px;
 
     background:
-        rgba(255,255,255,.018);
+        var(--surface);
 }
 
 .source-card:hover {
     border-color:
-        rgba(34,211,238,.3);
-
-    background:
-        rgba(34,211,238,.03);
+        var(--accent-border);
 }
 
 .source-top {
@@ -2220,14 +2221,14 @@ pre code {
     justify-content:
         space-between;
 
-    gap: 8px;
+    gap: 6px;
 
-    margin-bottom: 9px;
+    margin-bottom: 6px;
 }
 
 .source-number {
-    width: 23px;
-    height: 23px;
+    width: 21px;
+    height: 21px;
 
     display: grid;
 
@@ -2235,260 +2236,381 @@ pre code {
 
     border-radius: 7px;
 
-    color: #67e8f9;
-
     background:
-        rgba(34,211,238,.07);
+        var(--accent-soft);
 
-    font-size: 10px;
+    color:
+        var(--accent-2);
 
-    font-weight: 800;
+    font-size: 8px;
+
+    font-weight: 750;
 }
 
 .source-score {
-    color: var(--muted);
+    color:
+        var(--muted);
 
-    font-size: 9px;
+    font-size: 7px;
 }
 
 .source-card strong {
     display: block;
 
-    margin-bottom: 4px;
-
-    font-size: 12px;
+    font-size: 9px;
 }
 
 .source-card small {
     display: block;
 
-    overflow: hidden;
+    margin-top: 2px;
 
-    color: #64748b;
+    color:
+        var(--muted);
 
-    font-size: 9px;
-
-    white-space: nowrap;
-
-    text-overflow: ellipsis;
+    font-size: 7px;
 }
 
 .source-link {
     display: block;
 
-    margin-top: 9px;
+    margin-top: 5px;
 
-    color: #67e8f9;
+    color:
+        var(--accent-2);
 
-    font-size: 10px;
+    font-size: 8px;
 }
 
-.empty-card {
-    padding: 14px;
+.empty-source {
+    color:
+        var(--muted);
 
-    border:
-        1px dashed var(--border);
-
-    border-radius: 10px;
-
-    color: var(--muted);
-
-    font-size: 11px;
+    font-size: 9px;
 }
 
 
-/* ==========================================================
-   ABOUT + RESULTS PAGES
-========================================================== */
+/* ============================================================
+   FEEDBACK
+============================================================ */
 
-.page-content {
+.feedback-row {
+    display: flex;
+
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 5px;
+
+    margin-top: 12px;
+}
+
+.feedback-row
+> span:first-child {
+    color:
+        var(--muted);
+
+    font-size: 9px;
+}
+
+.feedback-button {
     padding:
-        58px 0 80px;
-}
+        6px 8px;
 
-.page-heading {
-    max-width: 760px;
+    border: 0;
 
-    margin-bottom: 32px;
-}
-
-.page-heading h1 {
-    margin:
-        0 0 12px;
-
-    font-size:
-        clamp(
-            34px,
-            6vw,
-            54px
-        );
-
-    letter-spacing: -.04em;
-}
-
-.page-heading p {
-    color: #cbd5e1;
-}
-
-.info-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(
-            2,
-            minmax(0,1fr)
-        );
-
-    gap: 14px;
-}
-
-.info-card {
-    padding: 20px;
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 15px;
+    border-radius: 8px;
 
     background:
-        rgba(255,255,255,.02);
+        transparent;
+
+    color:
+        var(--muted);
+
+    font-size: 9px;
 }
 
-.info-card h2 {
-    margin:
-        0 0 8px;
+.feedback-button:hover,
+.feedback-button.active {
+    background:
+        var(--surface-2);
 
-    font-size: 16px;
+    color:
+        var(--text);
 }
 
-.info-card p {
-    margin: 0;
+.feedback-thanks {
+    color:
+        var(--accent-2);
 
-    color: #cbd5e1;
-
-    font-size: 13px;
+    font-size: 8px;
 }
 
-.metric-grid {
+
+/* ============================================================
+   COMPARE
+============================================================ */
+
+.compare-summary {
     display: grid;
 
     grid-template-columns:
         repeat(
             4,
-            minmax(0,1fr)
+            minmax(
+                0,
+                1fr
+            )
         );
 
-    gap: 11px;
+    gap: 7px;
 
-    margin-bottom: 28px;
+    margin:
+        0 0 22px;
 }
 
-.metric-card {
-    padding: 16px;
+.compare-summary div {
+    padding:
+        9px 10px;
 
     border:
-        1px solid var(--border);
+        1px solid
+        var(--border);
 
-    border-radius: 13px;
+    border-radius: 10px;
 
     background:
-        rgba(255,255,255,.02);
+        var(--surface);
 }
 
-.metric-card span {
+.compare-summary span {
     display: block;
 
-    color: var(--muted);
+    color:
+        var(--muted);
 
-    font-size: 10px;
+    font-size: 7px;
 }
 
-.metric-card strong {
+.compare-summary strong {
     display: block;
 
-    margin-top: 4px;
+    margin-top: 3px;
 
-    color: #e2e8f0;
+    color:
+        var(--accent-2);
 
-    font-size: 20px;
+    font-size: 11px;
 }
 
-.graph-section {
-    margin-top: 36px;
-}
-
-.graph-section h2 {
-    margin-top: 0;
-}
-
-.graph-grid {
+.compare-grid {
     display: grid;
 
     grid-template-columns:
         repeat(
             2,
-            minmax(0,1fr)
+            minmax(
+                0,
+                1fr
+            )
         );
 
     gap: 16px;
-
-    margin-top: 15px;
 }
 
-.graph-card {
-    padding: 10px;
+.compare-grid
+.answer-card {
+    padding: 13px;
 
     border:
-        1px solid var(--border);
+        1px solid
+        var(--border);
 
     border-radius: 14px;
 
-    background: white;
-}
-
-.graph-card img {
-    display: block;
-
-    width: 100%;
-
-    border-radius: 8px;
+    background:
+        var(--surface);
 }
 
 
-/* ==========================================================
-   ERRORS
-========================================================== */
+/* ============================================================
+   COMPOSER
+============================================================ */
 
-.error-card {
-    max-width: 900px;
+.composer-shell {
+    position: fixed;
+
+    left: 260px;
+
+    right: 0;
+
+    bottom: 0;
+
+    z-index: 35;
+
+    padding:
+        16px 20px 20px;
+
+    background:
+        linear-gradient(
+            180deg,
+            transparent 0%,
+            var(--page) 28%
+        );
+}
+
+body.empty-chat
+.composer-shell {
+    padding-bottom: 22px;
+}
+
+.composer {
+    width:
+        min(
+            760px,
+            calc(
+                100% - 16px
+            )
+        );
 
     margin:
         0 auto;
 
-    padding: 18px;
+    padding:
+        8px 10px 9px;
 
     border:
         1px solid
-        rgba(251,113,133,.25);
+        var(--border);
 
-    border-radius: 13px;
-
-    color: #fecdd3;
+    border-radius: 24px;
 
     background:
-        rgba(251,113,133,.06);
+        var(--surface);
 }
 
-.error-card strong {
-    display: block;
+.composer textarea {
+    width: 100%;
 
-    margin-bottom: 5px;
+    min-height: 50px;
+
+    max-height: 150px;
+
+    resize: none;
+
+    padding:
+        10px 9px 7px;
+
+    border: 0;
+
+    outline: 0;
+
+    background:
+        transparent;
+
+    color:
+        var(--text);
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+.composer textarea::placeholder {
+    color:
+        var(--muted);
+}
+
+.composer-bottom {
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+        space-between;
+
+    gap: 9px;
+}
+
+.composer-left {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+}
+
+.method-select,
+.composer-button {
+    height: 31px;
+
+    padding:
+        0 9px;
+
+    border: 0;
+
+    border-radius: 9px;
+
+    background:
+        transparent;
+
+    color:
+        var(--muted);
+
+    font-size: 9px;
+}
+
+.method-select:hover,
+.composer-button:hover {
+    background:
+        var(--surface-2);
+
+    color:
+        var(--text);
+}
+
+.send-button {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+
+    place-items: center;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background:
+        var(--accent);
+
+    color: white;
+
+    font-size: 17px;
+}
+
+.send-button:hover {
+    background:
+        var(--accent-2);
+}
+
+.composer-note {
+    margin:
+        6px auto 0;
+
+    text-align: center;
+
+    color:
+        var(--muted);
+
+    font-size: 7px;
 }
 
 
-/* ==========================================================
+/* ============================================================
    LOADING
-========================================================== */
+============================================================ */
 
 .loading-overlay {
     display: none;
@@ -2502,335 +2624,450 @@ pre code {
     place-items: center;
 
     background:
-        rgba(2,8,18,.84);
+        rgba(
+            0,
+            0,
+            0,
+            .44
+        );
 
     backdrop-filter:
-        blur(12px);
+        blur(4px);
 }
 
 .loading-overlay.active {
     display: grid;
 }
 
-.loading-box {
+.loading-card {
     width:
         min(
-            360px,
-            calc(100% - 36px)
+            320px,
+            calc(
+                100% - 34px
+            )
         );
 
-    padding: 28px;
-
-    text-align: center;
+    padding: 22px;
 
     border:
-        1px solid var(--border);
+        1px solid
+        var(--border);
 
-    border-radius: 18px;
+    border-radius: 16px;
 
     background:
-        var(--panel);
+        var(--surface);
 
-    box-shadow:
-        0 30px 80px
-        rgba(0,0,0,.35);
+    text-align: center;
 }
 
-.loader {
-    width: 42px;
-    height: 42px;
+.spinner {
+    width: 34px;
+    height: 34px;
 
     margin:
-        0 auto 17px;
+        0 auto 11px;
 
     border:
         3px solid
-        rgba(255,255,255,.08);
+        var(--border);
 
     border-top-color:
-        var(--cyan);
+        var(--accent-2);
 
     border-radius: 50%;
 
     animation:
-        spin .8s linear infinite;
+        spin
+        .8s
+        linear
+        infinite;
 }
 
 @keyframes spin {
     to {
         transform:
-            rotate(360deg);
+            rotate(
+                360deg
+            );
     }
 }
 
-.loading-box p {
-    margin-bottom: 0;
-
-    color: var(--muted);
+.loading-card strong {
+    display: block;
 
     font-size: 11px;
 }
 
+.loading-card span {
+    display: block;
 
-/* ==========================================================
-   FOOTER
-========================================================== */
+    margin-top: 4px;
 
-footer {
-    padding:
-        25px 0;
+    color:
+        var(--muted);
 
-    border-top:
-        1px solid var(--border);
-
-    color: #64748b;
-
-    font-size: 10px;
+    font-size: 8px;
 }
 
 
-/* ==========================================================
-   COMPARE SUMMARY
-========================================================== */
+/* ============================================================
+   ABOUT RESULTS LOGIN
+============================================================ */
 
-.comparison-summary {
-    margin-bottom: 18px;
-
-    padding: 19px;
-
-    border:
-        1px solid
-        rgba(34, 211, 238, .18);
-
-    border-radius: 16px;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(34, 211, 238, .055),
-            rgba(99, 102, 241, .035)
+.page {
+    width:
+        min(
+            940px,
+            calc(
+                100% - 38px
+            )
         );
 
-    box-shadow:
-        0 16px 45px
-        rgba(0, 0, 0, .12);
+    margin:
+        0 auto;
+
+    padding:
+        34px 0 80px;
 }
 
-.comparison-title {
-    display: flex;
+.page h1 {
+    margin:
+        0 0 8px;
 
-    align-items: flex-end;
-
-    justify-content:
-        space-between;
-
-    gap: 15px;
-
-    margin-bottom: 15px;
+    font-size: 30px;
 }
 
-.comparison-title h3 {
+.page > p {
+    max-width: 700px;
+
     margin: 0;
 
-    font-size: 17px;
+    color:
+        var(--muted);
+
+    font-size: 12px;
+
+    line-height: 1.7;
 }
 
-.comparison-note {
-    color: var(--muted);
-
-    font-size: 10px;
-}
-
-.comparison-metrics {
+.info-grid,
+.metric-grid,
+.graph-grid {
     display: grid;
 
+    gap: 10px;
+
+    margin-top: 20px;
+}
+
+.info-grid,
+.graph-grid {
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(
+                0,
+                1fr
+            )
+        );
+}
+
+.metric-grid {
     grid-template-columns:
         repeat(
             4,
-            minmax(0, 1fr)
+            minmax(
+                0,
+                1fr
+            )
         );
-
-    gap: 10px;
 }
 
-.comparison-metric {
-    padding: 14px;
+.info-card,
+.metric-card,
+.graph-card,
+.login-card {
+    padding: 15px;
 
     border:
-        1px solid var(--border);
+        1px solid
+        var(--border);
 
-    border-radius: 11px;
+    border-radius: 14px;
 
     background:
-        rgba(255, 255, 255, .018);
+        var(--surface);
 }
 
-.comparison-metric span {
+.info-card h2 {
+    margin:
+        0 0 6px;
+
+    font-size: 13px;
+}
+
+.info-card p {
+    margin: 0;
+
+    color:
+        var(--muted);
+
+    font-size: 10px;
+
+    line-height: 1.6;
+}
+
+.metric-card span {
     display: block;
 
-    color: var(--muted);
+    color:
+        var(--muted);
 
-    font-size: 9px;
+    font-size: 8px;
 }
 
-.comparison-metric strong {
+.metric-card strong {
     display: block;
 
-    margin-top: 3px;
+    margin-top: 4px;
 
-    color: #67e8f9;
-
-    font-size: 17px;
+    font-size: 16px;
 }
 
-.comparison-metric small {
+.graph-card img {
+    width: 100%;
+
     display: block;
-
-    margin-top: 2px;
-
-    color: #94a3b8;
-
-    font-size: 9px;
-}
-
-.comparison-warning {
-    margin-top: 13px;
-
-    padding: 11px 13px;
 
     border-radius: 9px;
 
-    color: #cbd5e1;
+    background: white;
+}
+
+.login-card {
+    width:
+        min(
+            420px,
+            100%
+        );
+
+    margin:
+        50px auto 0;
+}
+
+.login-card h2 {
+    margin:
+        0 0 6px;
+}
+
+.login-card p {
+    margin:
+        0 0 16px;
+
+    color:
+        var(--muted);
+
+    font-size: 10px;
+
+    line-height: 1.6;
+}
+
+.login-field {
+    display: grid;
+
+    gap: 5px;
+
+    margin-bottom: 10px;
+}
+
+.login-field label {
+    color:
+        var(--muted);
+
+    font-size: 9px;
+}
+
+.login-field input {
+    width: 100%;
+
+    padding:
+        10px 11px;
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius: 10px;
+
+    outline: 0;
 
     background:
-        rgba(255, 255, 255, .018);
+        var(--surface-2);
+}
+
+.login-field input:focus {
+    border-color:
+        var(--accent-border);
+}
+
+.login-submit {
+    width: 100%;
+
+    padding:
+        10px 12px;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    background:
+        var(--accent);
+
+    color: white;
+
+    font-weight: 650;
+}
+
+.error-card {
+    padding: 14px;
+
+    border:
+        1px solid
+        rgba(
+            255,
+            125,
+            141,
+            .25
+        );
+
+    border-radius: 12px;
+
+    background:
+        rgba(
+            255,
+            125,
+            141,
+            .07
+        );
+
+    color:
+        var(--danger);
 
     font-size: 10px;
 }
 
-.comparison-warning strong {
-    color: #a5f3fc;
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media (
+    max-width: 920px
+) {
+
+    .app-shell {
+        grid-template-columns:
+            1fr;
+    }
+
+    .sidebar {
+        transform:
+            translateX(
+                -100%
+            );
+
+        transition:
+            transform
+            .2s ease;
+    }
+
+    .sidebar.open {
+        transform:
+            translateX(
+                0
+            );
+    }
+
+    .main-shell {
+        grid-column: 1;
+    }
+
+    .composer-shell {
+        left: 0;
+    }
+
+    .mobile-menu {
+        display: grid;
+    }
 }
 
 
-
-/* ==========================================================
-   RESPONSIVE
-========================================================== */
-
 @media (
-    max-width: 850px
+    max-width: 700px
 ) {
 
-    .compare-layout,
+    .chat-area {
+        width:
+            calc(
+                100% - 24px
+            );
+    }
+
+    .source-grid,
+    .compare-grid,
+    .compare-summary,
     .info-grid,
+    .metric-grid,
     .graph-grid {
         grid-template-columns:
             1fr;
     }
 
-    .metric-grid {
-        grid-template-columns:
-            repeat(2,1fr);
+    .user-message {
+        width: 88%;
     }
 
-    .source-grid {
-        grid-template-columns:
-            1fr;
+    .topbar-title {
+        font-size: 12px;
     }
 
-    .comparison-metrics {
-        grid-template-columns:
-            repeat(2, 1fr);
+    .topbar-right {
+        gap: 2px;
     }
 
-}
-
-@media (
-    max-width: 650px
-) {
-
-    .nav-inner {
-        flex-direction: column;
-
-        align-items: stretch;
-
+    .top-button {
         padding:
-            10px 0;
+            0 7px;
+
+        font-size: 9px;
     }
 
-    .nav-links {
-        justify-content:
-            space-between;
+    .signin-top {
+        padding:
+            0 9px;
     }
-
-    .nav-links a {
-        flex: 1;
-
-        text-align: center;
-    }
-
-    .hero {
-        padding-top: 48px;
-    }
-
-    .search-row,
-    .form-actions,
-    .section-header,
-    .answer-heading,
-    .sources-heading {
-        align-items: stretch;
-
-        flex-direction: column;
-    }
-
-    select {
-        width: 100%;
-
-        min-width: 0;
-    }
-
-    .button-group {
-        width: 100%;
-    }
-
-    .button-group button {
-        flex: 1;
-    }
-
-    .stats {
-        grid-template-columns:
-            1fr;
-    }
-
-    .metric-grid {
-        grid-template-columns:
-            1fr;
-    }
-
-    .official-badge {
-        width: fit-content;
-    }
-
-    .comparison-metrics {
-        grid-template-columns:
-            1fr;
-    }
-
-    .comparison-title {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
 }
 """
-
-
 # ============================================================
 # JAVASCRIPT
 # ============================================================
 
-JS = """
+JS = r"""
+const HISTORY_KEY =
+    "fastapi_assistant_history";
+
+const THEME_KEY =
+    "fastapi_assistant_theme";
+
+const LAST_QUESTION_KEY =
+    "fastapi_last_question";
+
+const LAST_METHOD_KEY =
+    "fastapi_last_method";
+
+
 const form =
     document.getElementById(
         "question-form"
@@ -2841,9 +3078,9 @@ const questionInput =
         "question-input"
     );
 
-const loadingOverlay =
+const methodSelect =
     document.getElementById(
-        "loading-overlay"
+        "retrieval-method"
     );
 
 const historyContainer =
@@ -2851,8 +3088,15 @@ const historyContainer =
         "history-container"
     );
 
-const HISTORY_KEY =
-    "fastapi_assistant_history";
+const historySearch =
+    document.getElementById(
+        "history-search-input"
+    );
+
+const loadingOverlay =
+    document.getElementById(
+        "loading-overlay"
+    );
 
 
 function getHistory() {
@@ -2860,87 +3104,98 @@ function getHistory() {
     try {
 
         return JSON.parse(
-            sessionStorage.getItem(
+            localStorage.getItem(
                 HISTORY_KEY
-            ) || "[]"
+            )
+            || "[]"
         );
 
-    } catch (error) {
+    } catch {
 
         return [];
 
     }
-
 }
 
 
-function saveQuestion(question) {
+function saveQuestion(
+    question
+) {
 
     if (!question) {
         return;
     }
 
-    let history =
-        getHistory();
 
-    history =
-        history.filter(
-            item =>
-                item !== question
-        );
+    let history =
+        getHistory()
+            .filter(
+                item =>
+                    item !== question
+            );
+
 
     history.unshift(
         question
     );
 
-    history =
-        history.slice(
-            0,
-            8
-        );
 
-    sessionStorage.setItem(
+    localStorage.setItem(
         HISTORY_KEY,
         JSON.stringify(
-            history
+            history.slice(
+                0,
+                20
+            )
         )
     );
 
+
+    renderHistory();
 }
 
 
-function renderHistory() {
+function renderHistory(
+    filterText = ""
+) {
 
     if (!historyContainer) {
         return;
     }
 
+
+    const filter =
+        filterText
+            .trim()
+            .toLowerCase();
+
+
     const history =
-        getHistory();
+        getHistory()
+            .filter(
+                question =>
+                    question
+                        .toLowerCase()
+                        .includes(
+                            filter
+                        )
+            );
+
 
     historyContainer.innerHTML =
         "";
 
-    if (
-        history.length === 0
-    ) {
+
+    if (!history.length) {
 
         historyContainer.innerHTML =
-            '<div class="history-empty">' +
-            'No questions in this session yet.' +
-            '</div>';
+            '<div class="history-empty">'
+            + 'No recent chats yet.'
+            + '</div>';
 
         return;
-
     }
 
-    const wrapper =
-        document.createElement(
-            "div"
-        );
-
-    wrapper.className =
-        "chips";
 
     history.forEach(
         question => {
@@ -2950,25 +3205,24 @@ function renderHistory() {
                     "button"
                 );
 
+
             button.type =
                 "button";
 
+
             button.className =
-                "chip";
+                "history-item";
+
 
             button.textContent =
-                question.length > 58
-                ? question.slice(
-                    0,
-                    58
-                ) + "..."
-                : question;
+                question;
+
 
             button.title =
                 question;
 
-            button.addEventListener(
-                "click",
+
+            button.onclick =
                 () => {
 
                     if (
@@ -2979,39 +3233,88 @@ function renderHistory() {
                             question;
 
                         questionInput.focus();
-
-                        window.scrollTo({
-                            top: 0,
-                            behavior: "smooth"
-                        });
-
                     }
 
-                }
-            );
 
-            wrapper.appendChild(
+                    closeSidebar();
+                };
+
+
+            historyContainer.appendChild(
                 button
             );
-
         }
     );
+}
 
-    historyContainer.appendChild(
-        wrapper
+
+function toggleHistorySearch() {
+
+    const searchBox =
+        document.getElementById(
+            "chat-search"
+        );
+
+
+    if (!searchBox) {
+        return;
+    }
+
+
+    searchBox.classList.toggle(
+        "open"
     );
 
+
+    const input =
+        document.getElementById(
+            "history-search-input"
+        );
+
+
+    if (
+        searchBox.classList.contains(
+            "open"
+        )
+        &&
+        input
+    ) {
+
+        input.focus();
+    }
 }
 
 
 function clearHistory() {
 
-    sessionStorage.removeItem(
+    localStorage.removeItem(
         HISTORY_KEY
     );
 
-    renderHistory();
 
+    renderHistory();
+}
+
+
+function newChat() {
+
+    window.location.href =
+        "/";
+}
+
+
+function focusComposer() {
+
+    if (!questionInput) {
+
+        window.location.href =
+            "/";
+
+        return;
+    }
+
+
+    questionInput.focus();
 }
 
 
@@ -3021,11 +3324,333 @@ function clearQuestion() {
         return;
     }
 
+
     questionInput.value =
         "";
 
-    questionInput.focus();
 
+    questionInput.focus();
+}
+
+
+function toggleSidebar() {
+
+    document
+        .getElementById(
+            "sidebar"
+        )
+        ?.classList
+        .toggle(
+            "open"
+        );
+}
+
+
+function closeSidebar() {
+
+    document
+        .getElementById(
+            "sidebar"
+        )
+        ?.classList
+        .remove(
+            "open"
+        );
+}
+
+
+function applyTheme(
+    theme
+) {
+
+    document.body.setAttribute(
+        "data-theme",
+        theme
+    );
+
+
+    localStorage.setItem(
+        THEME_KEY,
+        theme
+    );
+
+
+    const button =
+        document.getElementById(
+            "theme-button"
+        );
+
+
+    if (button) {
+
+        button.textContent =
+            theme === "dark"
+            ? "☀ Light"
+            : "☾ Dark";
+    }
+}
+
+
+function toggleTheme() {
+
+    const current =
+        document.body.getAttribute(
+            "data-theme"
+        )
+        || "dark";
+
+
+    applyTheme(
+        current === "dark"
+        ? "light"
+        : "dark"
+    );
+}
+
+
+function selectUserReaction(
+    button
+) {
+
+    const row =
+        button.closest(
+            ".user-reactions"
+        );
+
+
+    if (!row) {
+        return;
+    }
+
+
+    row
+        .querySelectorAll(
+            ".user-reaction"
+        )
+        .forEach(
+            item => {
+
+                item.classList.remove(
+                    "active"
+                );
+            }
+        );
+
+
+    button.classList.add(
+        "active"
+    );
+}
+
+
+function setHelpful(
+    button,
+    value
+) {
+
+    const row =
+        button.closest(
+            ".feedback-row"
+        );
+
+
+    if (!row) {
+        return;
+    }
+
+
+    row
+        .querySelectorAll(
+            ".feedback-button"
+        )
+        .forEach(
+            item => {
+
+                item.classList.remove(
+                    "active"
+                );
+            }
+        );
+
+
+    button.classList.add(
+        "active"
+    );
+
+
+    const thanks =
+        row.querySelector(
+            ".feedback-thanks"
+        );
+
+
+    if (thanks) {
+
+        thanks.textContent =
+            value === "yes"
+            ? "Thanks for your feedback ✓"
+            : "Thanks — this helps improve the assistant.";
+    }
+}
+
+
+async function copyAnswer(
+    id,
+    button
+) {
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+
+    if (!element) {
+        return;
+    }
+
+
+    try {
+
+        await navigator
+            .clipboard
+            .writeText(
+                element.innerText
+            );
+
+
+        const original =
+            button.innerText;
+
+
+        button.innerText =
+            "Copied";
+
+
+        setTimeout(
+            () => {
+
+                button.innerText =
+                    original;
+            },
+            1000
+        );
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+    }
+}
+
+
+async function copyCode(
+    button
+) {
+
+    const code =
+        button
+            .closest(
+                ".code-wrapper"
+            )
+            ?.querySelector(
+                "code"
+            );
+
+
+    if (!code) {
+        return;
+    }
+
+
+    try {
+
+        await navigator
+            .clipboard
+            .writeText(
+                code.innerText
+            );
+
+
+        const original =
+            button.innerText;
+
+
+        button.innerText =
+            "Copied";
+
+
+        setTimeout(
+            () => {
+
+                button.innerText =
+                    original;
+            },
+            1000
+        );
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+    }
+}
+
+
+function regenerateLastQuestion() {
+
+    const question =
+        localStorage.getItem(
+            LAST_QUESTION_KEY
+        );
+
+
+    const method =
+        localStorage.getItem(
+            LAST_METHOD_KEY
+        )
+        || "semantic";
+
+
+    if (
+        !question
+        ||
+        !form
+        ||
+        !questionInput
+    ) {
+        return;
+    }
+
+
+    questionInput.value =
+        question;
+
+
+    if (methodSelect) {
+
+        methodSelect.value =
+            method;
+    }
+
+
+    form.requestSubmit();
+}
+
+
+if (historySearch) {
+
+    historySearch.addEventListener(
+        "input",
+        event => {
+
+            renderHistory(
+                event.target.value
+            );
+        }
+    );
 }
 
 
@@ -3040,169 +3665,75 @@ if (form) {
                     .value
                     .trim();
 
+
+            const method =
+                methodSelect
+                    ?.value
+                || "semantic";
+
+
             saveQuestion(
                 question
             );
 
+
+            localStorage.setItem(
+                LAST_QUESTION_KEY,
+                question
+            );
+
+
+            localStorage.setItem(
+                LAST_METHOD_KEY,
+                method
+            );
+
+
+            loadingOverlay
+                ?.classList
+                .add(
+                    "active"
+                );
+        }
+    );
+}
+
+
+if (questionInput) {
+
+    questionInput.addEventListener(
+        "keydown",
+        event => {
+
             if (
-                loadingOverlay
+                event.key === "Enter"
+                &&
+                !event.shiftKey
             ) {
 
-                loadingOverlay
-                    .classList
-                    .add(
-                        "active"
-                    );
-
-            }
-
-        }
-    );
-
-}
+                event.preventDefault();
 
 
-document
-    .querySelectorAll(
-        ".example-chip"
-    )
-    .forEach(
-        button => {
+                if (
+                    questionInput
+                        .value
+                        .trim()
+                ) {
 
-            button.addEventListener(
-                "click",
-                () => {
-
-                    if (
-                        questionInput
-                    ) {
-
-                        questionInput.value =
-                            button.dataset
-                                .question;
-
-                        questionInput
-                            .focus();
-
-                    }
-
+                    form?.requestSubmit();
                 }
-            );
-
+            }
         }
     );
-
-
-async function copyAnswer(
-    id,
-    button
-) {
-
-    const element =
-        document.getElementById(
-            id
-        );
-
-    if (!element) {
-        return;
-    }
-
-    try {
-
-        await navigator
-            .clipboard
-            .writeText(
-                element.innerText
-            );
-
-        if (button) {
-
-            const original =
-                button.innerText;
-
-            button.innerText =
-                "Copied";
-
-            setTimeout(
-                () => {
-
-                    button.innerText =
-                        original;
-
-                },
-                1200
-            );
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Could not copy answer.",
-            error
-        );
-
-    }
-
 }
 
 
-async function copyCode(
-    button
-) {
-
-    const wrapper =
-        button.closest(
-            ".code-wrapper"
-        );
-
-    if (!wrapper) {
-        return;
-    }
-
-    const code =
-        wrapper.querySelector(
-            "code"
-        );
-
-    if (!code) {
-        return;
-    }
-
-    try {
-
-        await navigator
-            .clipboard
-            .writeText(
-                code.innerText
-            );
-
-        const original =
-            button.innerText;
-
-        button.innerText =
-            "Copied";
-
-        setTimeout(
-            () => {
-
-                button.innerText =
-                    original;
-
-            },
-            1200
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Could not copy code.",
-            error
-        );
-
-    }
-
-}
+applyTheme(
+    localStorage.getItem(
+        THEME_KEY
+    )
+    || "dark"
+);
 
 
 renderHistory();
@@ -3210,76 +3741,243 @@ renderHistory();
 
 
 # ============================================================
-# SHARED NAVIGATION
+# SIDEBAR
 # ============================================================
 
-def nav_html():
+def sidebar_html():
+
     return """
-    <nav>
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
 
-        <div class="container nav-inner">
+        <div class="sidebar-head">
 
-            <a
-                href="/"
-                class="brand"
+            <div class="sidebar-name">
+                FastAPI Assistant
+            </div>
+
+            <button
+                type="button"
+                class="sidebar-icon-button"
+                onclick="closeSidebar()"
+                title="Close sidebar"
+            >
+                ◫
+            </button>
+
+        </div>
+
+
+        <nav class="side-nav">
+
+            <button
+                type="button"
+                class="
+                    side-action
+                    active
+                "
+                onclick="newChat()"
             >
 
-                <div class="logo">
-                    FA
+                <span class="side-symbol">
+                    ✎
+                </span>
+
+                <span>
+                    New chat
+                </span>
+
+            </button>
+
+
+            <button
+                type="button"
+                class="side-action"
+                onclick="
+                    toggleHistorySearch()
+                "
+            >
+
+                <span class="side-symbol">
+                    ⌕
+                </span>
+
+                <span>
+                    Search chats
+                </span>
+
+            </button>
+
+
+            <div
+                class="chat-search"
+                id="chat-search"
+            >
+
+                <input
+                    type="text"
+                    id="history-search-input"
+                    placeholder="Search history..."
+                >
+
+            </div>
+
+
+            <a
+                href="/about"
+                class="side-link"
+            >
+
+                <span class="side-symbol">
+                    ⓘ
+                </span>
+
+                <span>
+                    About
+                </span>
+
+            </a>
+
+
+            <a
+                href="/results"
+                class="side-link"
+            >
+
+                <span class="side-symbol">
+                    ▥
+                </span>
+
+                <span>
+                    Results
+                </span>
+
+            </a>
+
+        </nav>
+
+
+        <div class="side-section-title">
+            Recents
+        </div>
+
+
+        <div
+            class="history-list"
+            id="history-container"
+        ></div>
+
+
+        <div class="sidebar-bottom">
+
+            <a
+                href="/login"
+                class="profile-row"
+            >
+
+                <div class="profile-avatar">
+                    G
                 </div>
 
-                <div class="brand-text">
+                <div class="profile-copy">
 
                     <strong>
-                        FastAPI Docs Assistant
+                        Guest
                     </strong>
 
                     <span>
-                        RAG documentation search
+                        Sign in to save chats
                     </span>
 
                 </div>
 
             </a>
 
-
-            <div class="nav-links">
-
-                <a href="/">
-                    Assistant
-                </a>
-
-                <a href="/about">
-                    About
-                </a>
-
-                <a href="/results">
-                    Results
-                </a>
-
-            </div>
-
         </div>
 
-    </nav>
+    </aside>
     """
 
 
 # ============================================================
-# SHARED HTML DOCUMENT
+# TOP BAR
+# ============================================================
+
+def topbar_html(
+    title="FastAPI Assistant"
+):
+
+    return f"""
+    <header class="topbar">
+
+        <div class="topbar-left">
+
+            <button
+                type="button"
+                class="mobile-menu"
+                onclick="toggleSidebar()"
+                title="Menu"
+                aria-label="Open menu"
+            >
+                ☰
+            </button>
+
+
+            <div class="topbar-title">
+                {html.escape(title)}
+            </div>
+
+        </div>
+
+
+        <div class="topbar-right">
+
+            <button
+                type="button"
+                class="top-button"
+                onclick="focusComposer()"
+            >
+                ⌕ Search
+            </button>
+
+
+            <button
+                type="button"
+                class="top-button"
+                id="theme-button"
+                onclick="toggleTheme()"
+            >
+                ☀ Light
+            </button>
+
+
+            <a
+                href="/login"
+                class="
+                    top-button
+                    signin-top
+                "
+            >
+                Sign in
+            </a>
+
+        </div>
+
+    </header>
+    """
+
+
+# ============================================================
+# DOCUMENT
 # ============================================================
 
 def document(
     content,
     title=APP_TITLE,
-    include_js=False,
+    body_class="",
 ):
-    script_html = ""
-
-    if include_js:
-        script_html = (
-            f"<script>{JS}</script>"
-        )
 
     safe_title = html.escape(
         title
@@ -3298,7 +3996,7 @@ def document(
             name="viewport"
             content="
                 width=device-width,
-                initial-scale=1
+                initial-scale=1.0
             "
         >
 
@@ -3313,26 +4011,38 @@ def document(
     </head>
 
 
-    <body>
+    <body
+        data-theme="dark"
+        class="{body_class}"
+    >
 
-        {nav_html()}
+        <div class="app-shell">
 
-        {content}
+            {sidebar_html()}
 
-        <footer>
 
-            <div class="container">
+            <main class="main-shell">
 
-                RAG-Based Technical
-                Documentation Assistant
-                · Official FastAPI
-                documentation corpus
+                {
+                    topbar_html(
+                        title
+                    )
+                }
 
-            </div>
+                {content}
 
-        </footer>
+            </main>
 
-        {script_html}
+        </div>
+
+
+        <script>
+            {JS}
+        </script>
+
+        <script
+            src="/static/js/app.js"
+        ></script>
 
     </body>
 
@@ -3341,16 +4051,87 @@ def document(
 
 
 # ============================================================
-# HOME PAGE
+# USER MESSAGE
 # ============================================================
 
-def home_page(
-    question="",
-    method="semantic",
-    result=None,
-    compare_results=None,
-    error=None,
+def user_message_html(
+    question
 ):
+
+    return f"""
+    <section class="user-block">
+
+        <div class="user-message">
+
+            <div class="user-label">
+                You
+            </div>
+
+
+            <div class="user-bubble">
+                {html.escape(question)}
+            </div>
+
+
+            <div class="user-reactions">
+
+                <button
+                    type="button"
+                    class="user-reaction"
+                    onclick="
+                        selectUserReaction(
+                            this
+                        )
+                    "
+                    title="Good"
+                >
+                    🙂
+                </button>
+
+
+                <button
+                    type="button"
+                    class="user-reaction"
+                    onclick="
+                        selectUserReaction(
+                            this
+                        )
+                    "
+                    title="Like"
+                >
+                    👍
+                </button>
+
+
+                <button
+                    type="button"
+                    class="user-reaction"
+                    onclick="
+                        selectUserReaction(
+                            this
+                        )
+                    "
+                    title="Dislike"
+                >
+                    👎
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+    """
+
+
+# ============================================================
+# COMPOSER
+# ============================================================
+
+def composer_html(
+    method="semantic"
+):
+
     semantic_selected = (
         "selected"
         if method == "semantic"
@@ -3369,28 +4150,134 @@ def home_page(
         else ""
     )
 
-    result_html = ""
+    return f"""
+    <div class="composer-shell">
+
+        <form
+            method="post"
+            action="/"
+            class="composer"
+            id="question-form"
+        >
+
+            <textarea
+                name="question"
+                id="question-input"
+                required
+                placeholder="Ask FastAPI..."
+            ></textarea>
+
+
+            <div class="composer-bottom">
+
+                <div class="composer-left">
+
+                    <select
+                        name="retrieval_method"
+                        id="retrieval-method"
+                        class="method-select"
+                    >
+
+                        <option
+                            value="semantic"
+                            {semantic_selected}
+                        >
+                            Semantic
+                        </option>
+
+                        <option
+                            value="bm25"
+                            {bm25_selected}
+                        >
+                            BM25
+                        </option>
+
+                        <option
+                            value="compare"
+                            {compare_selected}
+                        >
+                            Compare
+                        </option>
+
+                    </select>
+
+
+                    <button
+                        type="button"
+                        class="composer-button"
+                        onclick="clearQuestion()"
+                    >
+                        Clear
+                    </button>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="send-button"
+                    title="Send"
+                >
+                    ↑
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <div class="composer-note">
+            Answers are grounded in official
+            FastAPI documentation.
+        </div>
+
+    </div>
+    """
+
+
+# ============================================================
+# HOME PAGE
+# ============================================================
+
+def home_page(
+    question="",
+    method="semantic",
+    result=None,
+    compare_results=None,
+    error=None,
+):
 
     if error:
-        safe_error = html.escape(
-            error
+
+        question_html = (
+            user_message_html(
+                question
+            )
+            if question
+            else ""
         )
 
-        result_html = f"""
-        <section class="results-section">
+        conversation = f"""
+        {question_html}
 
-            <div class="container">
+        <section class="assistant-block">
 
-                <div class="error-card">
+            <div class="assistant-label">
+                FastAPI Assistant
+            </div>
 
-                    <strong>
-                        Unable to generate answer
-                    </strong>
+            <div class="error-card">
 
-                    <div>
-                        {safe_error}
-                    </div>
+                <strong>
+                    Unable to generate answer
+                </strong>
 
+                <div
+                    style="
+                        margin-top:5px;
+                    "
+                >
+                    {html.escape(error)}
                 </div>
 
             </div>
@@ -3399,6 +4286,7 @@ def home_page(
         """
 
     elif compare_results:
+
         semantic_result = (
             compare_results[0]
         )
@@ -3419,52 +4307,33 @@ def home_page(
             compact=True,
         )
 
-        comparison_summary = (
+        conversation = f"""
+        {
+            user_message_html(
+                question
+            )
+        }
+
+        {
             compare_summary_card(
                 semantic_result,
                 bm25_result,
             )
-        )
+        }
 
-        result_html = f"""
-        <section
-            class="results-section"
-            id="results"
-        >
+        <section class="assistant-block">
 
-            <div class="container">
-
-                <div class="section-header">
-
-                    <div>
-
-                        <span class="eyebrow">
-                            Compare mode
-                        </span>
-
-                        <h2>
-                            Semantic vs BM25
-                        </h2>
-
-                    </div>
-
-                    <span class="hint">
-                        Same question · same corpus ·
-                        same language model
-                    </span>
-
-                </div>
+            <div class="assistant-label">
+                FastAPI Assistant ·
+                Compare mode
+            </div>
 
 
-                {comparison_summary}
+            <div class="compare-grid">
 
-                <div class="compare-layout">
+                {semantic_card}
 
-                    {semantic_card}
-
-                    {bm25_card}
-
-                </div>
+                {bm25_card}
 
             </div>
 
@@ -3472,473 +4341,222 @@ def home_page(
         """
 
     elif result:
-        card = result_card(
-            result,
-            "main-answer",
-        )
 
-        result_html = f"""
-        <section
-            class="results-section"
-            id="results"
-        >
+        conversation = f"""
+        {
+            user_message_html(
+                question
+            )
+        }
 
-            <div class="container">
+        <section class="assistant-block">
 
-                {card}
-
+            <div class="assistant-label">
+                FastAPI Assistant
             </div>
+
+            {
+                result_card(
+                    result,
+                    "main-answer",
+                )
+            }
 
         </section>
         """
 
-    safe_question = html.escape(
-        question,
-        quote=True,
-    )
+    else:
+
+        conversation = """
+        <section class="empty-state">
+
+            <h1>
+                How can I help?
+            </h1>
+
+            <p>
+                Ask a question about FastAPI
+                and get an answer grounded in
+                the official documentation.
+            </p>
+
+        </section>
+        """
 
     content = f"""
     <div
-        id="loading-overlay"
         class="loading-overlay"
+        id="loading-overlay"
     >
 
-        <div class="loading-box">
+        <div class="loading-card">
 
-            <div class="loader"></div>
+            <div class="spinner">
+            </div>
 
             <strong>
-                Searching FastAPI documentation...
+                Searching documentation...
             </strong>
 
-            <p>
-                Retrieving relevant context
-                and generating a grounded answer.
-            </p>
+            <span>
+                Retrieving sources and
+                generating an answer.
+            </span>
 
         </div>
 
     </div>
 
 
-    <main>
+    <section class="chat-area">
 
-        <section class="hero">
+        {conversation}
 
-            <div class="container">
-
-                <div class="hero-content">
-
-                    <div class="pill">
-                        Retrieval-Augmented Generation
-                    </div>
-
-                    <h1>
-
-                        Ask FastAPI.
-
-                        <span class="gradient">
-                            Get grounded answers.
-                        </span>
-
-                    </h1>
-
-                    <p class="hero-description">
-
-                        Search official FastAPI
-                        documentation using semantic
-                        vector retrieval, BM25 keyword
-                        search, or compare both
-                        approaches side by side.
-
-                    </p>
-
-                </div>
+    </section>
 
 
-                <form
-                    method="post"
-                    action="/"
-                    id="question-form"
-                    class="search-panel"
-                >
-
-                    <div class="search-inner">
-
-                        <div class="search-row">
-
-                            <div class="search-label">
-                                Ask a FastAPI question
-                            </div>
-
-
-                            <select
-                                name="retrieval_method"
-                                aria-label="
-                                    Retrieval method
-                                "
-                            >
-
-                                <option
-                                    value="semantic"
-                                    {semantic_selected}
-                                >
-                                    Semantic / Vector
-                                </option>
-
-                                <option
-                                    value="bm25"
-                                    {bm25_selected}
-                                >
-                                    BM25 Keyword
-                                </option>
-
-                                <option
-                                    value="compare"
-                                    {compare_selected}
-                                >
-                                    Compare Both
-                                </option>
-
-                            </select>
-
-                        </div>
-
-
-                        <textarea
-                            name="question"
-                            id="question-input"
-                            required
-                            placeholder="How do I handle request validation errors in FastAPI?"
-                        >{safe_question}</textarea>
-
-
-                        <div class="form-actions">
-
-                            <span class="hint">
-
-                                Answers are grounded
-                                in retrieved official
-                                FastAPI documentation.
-
-                            </span>
-
-
-                            <div class="button-group">
-
-                                <button
-                                    type="button"
-                                    class="outline-button"
-                                    onclick="
-                                        clearQuestion()
-                                    "
-                                >
-                                    Clear
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    class="primary-button"
-                                >
-                                    Ask documentation
-                                </button>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="example-area">
-
-                            <div class="small-title">
-                                Try an example
-                            </div>
-
-
-                            <div class="chips">
-
-                                <button
-                                    type="button"
-                                    class="
-                                        chip
-                                        example-chip
-                                    "
-                                    data-question="How do I handle request validation errors in FastAPI?"
-                                >
-                                    Validation errors
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="
-                                        chip
-                                        example-chip
-                                    "
-                                    data-question="How do I use dependency injection in FastAPI?"
-                                >
-                                    Dependencies
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="
-                                        chip
-                                        example-chip
-                                    "
-                                    data-question="How do I upload files in FastAPI?"
-                                >
-                                    File uploads
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="
-                                        chip
-                                        example-chip
-                                    "
-                                    data-question="How do I create a WebSocket endpoint in FastAPI?"
-                                >
-                                    WebSockets
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="
-                                        chip
-                                        example-chip
-                                    "
-                                    data-question="How do I configure CORS in FastAPI?"
-                                >
-                                    CORS
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </form>
-
-
-                <div class="history-area">
-
-                    <div class="history-header">
-
-                        <strong>
-                            Session history
-                        </strong>
-
-                        <button
-                            type="button"
-                            class="outline-button"
-                            onclick="
-                                clearHistory()
-                            "
-                        >
-                            Clear history
-                        </button>
-
-                    </div>
-
-                    <div
-                        id="history-container"
-                    ></div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-        {result_html}
-
-    </main>
+    {
+        composer_html(
+            method
+        )
+    }
     """
+
+    body_class = (
+        "empty-chat"
+        if not any(
+            [
+                question,
+                result,
+                compare_results,
+                error,
+            ]
+        )
+        else ""
+    )
 
     return document(
         content,
-        include_js=True,
+        APP_TITLE,
+        body_class=body_class,
     )
 
 
 # ============================================================
-# ABOUT PAGE
+# ABOUT
 # ============================================================
 
 def about_page():
+
     content = """
-    <main class="page-content">
+    <section class="page">
 
-        <div class="container">
+        <h1>
+            About the project
+        </h1>
 
-            <div class="page-heading">
+        <p>
+            This project investigates a
+            RAG-based technical documentation
+            assistant using official FastAPI
+            documentation and compares semantic
+            retrieval with BM25.
+        </p>
 
-                <span class="eyebrow">
-                    Project methodology
-                </span>
 
-                <h1>
-                    How the assistant works
-                </h1>
+        <div class="info-grid">
+
+            <article class="info-card">
+
+                <h2>
+                    Documentation corpus
+                </h2>
 
                 <p>
-                    This project investigates how
-                    retrieval-augmented generation
-                    can support technical
-                    documentation question answering
-                    using official FastAPI
-                    documentation.
+                    Official English FastAPI
+                    documentation is collected,
+                    cleaned, chunked and stored
+                    with source URLs.
                 </p>
 
-            </div>
+            </article>
 
 
-            <div class="info-grid">
+            <article class="info-card">
 
-                <article class="info-card">
+                <h2>
+                    Semantic retrieval
+                </h2>
 
-                    <h2>
-                        1. Documentation corpus
-                    </h2>
+                <p>
+                    Sentence embeddings retrieve
+                    chunks according to semantic
+                    similarity between the
+                    question and documentation.
+                </p>
 
-                    <p>
-                        Official English FastAPI
-                        documentation pages are
-                        collected and processed into
-                        smaller chunks while
-                        preserving their titles,
-                        headings and source URLs.
-                    </p>
-
-                </article>
+            </article>
 
 
-                <article class="info-card">
+            <article class="info-card">
 
-                    <h2>
-                        2. Semantic retrieval
-                    </h2>
+                <h2>
+                    BM25 retrieval
+                </h2>
 
-                    <p>
-                        Documentation chunks are
-                        represented using pretrained
-                        sentence embeddings.
-                        Questions are embedded using
-                        the same model and chunks are
-                        ranked according to semantic
-                        similarity.
-                    </p>
+                <p>
+                    BM25 provides the
+                    keyword-based baseline over
+                    the same documentation corpus.
+                </p>
 
-                </article>
+            </article>
 
 
-                <article class="info-card">
+            <article class="info-card">
 
-                    <h2>
-                        3. BM25 retrieval
-                    </h2>
+                <h2>
+                    Grounded generation
+                </h2>
 
-                    <p>
-                        BM25 acts as the keyword-based
-                        baseline. It ranks the same
-                        documentation corpus using
-                        lexical term matching, allowing
-                        a direct comparison with
-                        semantic retrieval.
-                    </p>
+                <p>
+                    Retrieved chunks are passed
+                    to the language model, which
+                    answers using those sources.
+                </p>
 
-                </article>
-
-
-                <article class="info-card">
-
-                    <h2>
-                        4. Grounded generation
-                    </h2>
-
-                    <p>
-                        The highest-ranked
-                        documentation chunks are
-                        supplied to a pretrained
-                        language model. The model is
-                        instructed to answer using only
-                        the retrieved context and to
-                        cite its documentation
-                        sources.
-                    </p>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <h2>
-                        5. Evaluation
-                    </h2>
-
-                    <p>
-                        The project evaluates retrieval
-                        accuracy, ranking quality,
-                        answer correctness, source
-                        support, unsupported claims,
-                        response time and failure
-                        cases.
-                    </p>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <h2>
-                        6. Compare mode
-                    </h2>
-
-                    <p>
-                        A single question can be
-                        processed independently with
-                        semantic retrieval and BM25.
-                        Their generated answers,
-                        sources and response times can
-                        then be inspected side by
-                        side.
-                    </p>
-
-                </article>
-
-            </div>
+            </article>
 
         </div>
 
-    </main>
+    </section>
     """
 
     return document(
         content,
-        title=(
-            "About · "
-            + APP_TITLE
-        ),
+        "About · FastAPI Assistant",
     )
 
 
 # ============================================================
-# LOAD EVALUATION RESULTS
+# RESULTS
 # ============================================================
 
 def load_results():
+
     if not RESULTS_FILE.exists():
         return None
 
     try:
-        with RESULTS_FILE.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
-            return json.load(file)
+
+        return json.loads(
+            RESULTS_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
 
     except Exception as exc:
+
         print(
             "Could not load results:",
             repr(exc),
@@ -3947,50 +4565,34 @@ def load_results():
         return None
 
 
-# ============================================================
-# RESULTS PAGE
-# ============================================================
-
 def results_page():
+
     data = load_results()
 
     if not data:
-        content = """
-        <main class="page-content">
-
-            <div class="container">
-
-                <div class="error-card">
-
-                    <strong>
-                        Evaluation results unavailable
-                    </strong>
-
-                    The evaluation summary could not
-                    be loaded.
-
-                </div>
-
-            </div>
-
-        </main>
-        """
 
         return document(
-            content,
-            title=(
-                "Results · "
-                + APP_TITLE
-            ),
+            """
+            <section class="page">
+
+                <div class="error-card">
+                    Evaluation results
+                    could not be loaded.
+                </div>
+
+            </section>
+            """,
+
+            "Results · FastAPI Assistant",
         )
 
-    semantic_retrieval = (
+    semantic = (
         data[
             "retrieval_results"
         ]["semantic"]
     )
 
-    bm25_retrieval = (
+    bm25 = (
         data[
             "retrieval_results"
         ]["bm25"]
@@ -4008,433 +4610,115 @@ def results_page():
         ]["bm25"]
     )
 
-    # --------------------------------------------------------
-    # PRE-FORMAT METRICS
-    # --------------------------------------------------------
-
-    semantic_top1 = (
-        f'{semantic_retrieval["hit_at_1"] * 100:.0f}%'
-    )
-
-    semantic_top3 = (
-        f'{semantic_retrieval["hit_at_3"] * 100:.0f}%'
-    )
-
-    semantic_top5 = (
-        f'{semantic_retrieval["hit_at_5"] * 100:.0f}%'
-    )
-
-    bm25_top1 = (
-        f'{bm25_retrieval["hit_at_1"] * 100:.0f}%'
-    )
-
-    bm25_top3 = (
-        f'{bm25_retrieval["hit_at_3"] * 100:.0f}%'
-    )
-
-    bm25_top5 = (
-        f'{bm25_retrieval["hit_at_5"] * 100:.0f}%'
-    )
-
-    semantic_mrr = (
-        f'{semantic_retrieval["mean_reciprocal_rank"]:.3f}'
-    )
-
-    bm25_mrr = (
-        f'{bm25_retrieval["mean_reciprocal_rank"]:.3f}'
-    )
-
-    semantic_correctness = (
-        f'{semantic_answer["correctness_percentage"]:.1f}%'
-    )
-
-    bm25_correctness = (
-        f'{bm25_answer["correctness_percentage"]:.1f}%'
-    )
-
-    semantic_support = (
-        f'{semantic_answer["average_source_support_score"]:.1f}'
-    )
-
-    bm25_support = (
-        f'{bm25_answer["average_source_support_score"]:.1f}'
-    )
-
-    semantic_unsupported = (
-        semantic_answer[
-            "total_unsupported_claims"
-        ]
-    )
-
-    bm25_unsupported = (
-        bm25_answer[
-            "total_unsupported_claims"
-        ]
-    )
-
-    semantic_retrieval_time = (
-        f'{semantic_retrieval["average_response_time_ms"]:.2f} ms'
-    )
-
-    bm25_retrieval_time = (
-        f'{bm25_retrieval["average_response_time_ms"]:.2f} ms'
-    )
-
-    semantic_total_time = (
-        f'{semantic_answer["average_total_response_time_ms"] / 1000:.2f} s'
-    )
-
-    bm25_total_time = (
-        f'{bm25_answer["average_total_response_time_ms"] / 1000:.2f} s'
-    )
-
-    # --------------------------------------------------------
-    # GRAPHS
-    # --------------------------------------------------------
-
-    graph_names = [
+    metrics = [
         (
-            "retrieval_accuracy.png",
-            "Retrieval Accuracy",
+            "Semantic Top-1",
+            f'{semantic["hit_at_1"] * 100:.0f}%',
         ),
         (
-            "mean_reciprocal_rank.png",
-            "Mean Reciprocal Rank",
+            "BM25 Top-1",
+            f'{bm25["hit_at_1"] * 100:.0f}%',
         ),
         (
-            "answer_correctness.png",
-            "Answer Correctness",
+            "Semantic Top-3",
+            f'{semantic["hit_at_3"] * 100:.0f}%',
         ),
         (
-            "retrieval_response_time.png",
-            "Retrieval Response Time",
+            "BM25 Top-3",
+            f'{bm25["hit_at_3"] * 100:.0f}%',
         ),
         (
-            "total_response_time.png",
-            "End-to-End Response Time",
+            "Semantic Top-5",
+            f'{semantic["hit_at_5"] * 100:.0f}%',
+        ),
+        (
+            "BM25 Top-5",
+            f'{bm25["hit_at_5"] * 100:.0f}%',
+        ),
+        (
+            "Semantic correctness",
+            f'{semantic_answer["correctness_percentage"]:.1f}%',
+        ),
+        (
+            "BM25 correctness",
+            f'{bm25_answer["correctness_percentage"]:.1f}%',
         ),
     ]
 
-    graph_cards = []
+    metric_html = "".join(
+        f"""
+        <div class="metric-card">
 
-    for filename, label in graph_names:
-        path = (
-            GRAPHS_DIR
-            / filename
-        )
-
-        if path.exists():
-            graph_cards.append(
-                f"""
-                <article class="graph-card">
-
-                    <img
-                        src="/graphs/{filename}"
-                        alt="{html.escape(label)}"
-                    >
-
-                </article>
-                """
-            )
-
-    graphs_html = "\n".join(
-        graph_cards
-    )
-
-    graphs_section = ""
-
-    if graphs_html:
-        graphs_section = f"""
-        <section class="graph-section">
-
-            <span class="eyebrow">
-                Visual analysis
+            <span>
+                {html.escape(label)}
             </span>
 
-            <h2>
-                Evaluation graphs
-            </h2>
+            <strong>
+                {html.escape(value)}
+            </strong>
 
-            <div class="graph-grid">
-                {graphs_html}
-            </div>
-
-        </section>
+        </div>
         """
+        for label, value
+        in metrics
+    )
 
-    # --------------------------------------------------------
-    # RESULTS HTML
-    # --------------------------------------------------------
+    graph_names = [
+        "retrieval_accuracy.png",
+        "mean_reciprocal_rank.png",
+        "answer_correctness.png",
+        "retrieval_response_time.png",
+        "total_response_time.png",
+    ]
 
-    content = f"""
-    <main class="page-content">
+    graph_html = "".join(
+        f"""
+        <div class="graph-card">
 
-        <div class="container">
+            <img
+                src="/graphs/{filename}"
+                alt="{html.escape(filename)}"
+            >
 
-            <div class="page-heading">
+        </div>
+        """
+        for filename
+        in graph_names
+        if (
+            GRAPHS_DIR
+            / filename
+        ).exists()
+    )
 
-                <span class="eyebrow">
-                    Candidate evaluation
-                </span>
+    return document(
+        f"""
+        <section class="page">
 
-                <h1>
-                    Evaluation results
-                </h1>
+            <h1>
+                Evaluation results
+            </h1>
 
-                <p>
-                    These results compare semantic
-                    retrieval with BM25 using the
-                    current 20-question candidate
-                    evaluation set.
-                </p>
-
-            </div>
+            <p>
+                Candidate evaluation
+                comparing Semantic and BM25
+                retrieval on the FastAPI
+                documentation corpus.
+            </p>
 
 
             <div class="metric-grid">
-
-                <div class="metric-card">
-
-                    <span>
-                        Semantic Top-1
-                    </span>
-
-                    <strong>
-                        {semantic_top1}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        BM25 Top-1
-                    </span>
-
-                    <strong>
-                        {bm25_top1}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        Semantic Top-3
-                    </span>
-
-                    <strong>
-                        {semantic_top3}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        BM25 Top-3
-                    </span>
-
-                    <strong>
-                        {bm25_top3}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        Semantic Top-5
-                    </span>
-
-                    <strong>
-                        {semantic_top5}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        BM25 Top-5
-                    </span>
-
-                    <strong>
-                        {bm25_top5}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        Semantic MRR
-                    </span>
-
-                    <strong>
-                        {semantic_mrr}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        BM25 MRR
-                    </span>
-
-                    <strong>
-                        {bm25_mrr}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        Semantic answer correctness
-                    </span>
-
-                    <strong>
-                        {semantic_correctness}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        BM25 answer correctness
-                    </span>
-
-                    <strong>
-                        {bm25_correctness}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        Semantic retrieval time
-                    </span>
-
-                    <strong>
-                        {semantic_retrieval_time}
-                    </strong>
-
-                </div>
-
-
-                <div class="metric-card">
-
-                    <span>
-                        BM25 retrieval time
-                    </span>
-
-                    <strong>
-                        {bm25_retrieval_time}
-                    </strong>
-
-                </div>
-
+                {metric_html}
             </div>
 
 
-            <div class="info-grid">
-
-                <article class="info-card">
-
-                    <h2>
-                        Answer source support
-                    </h2>
-
-                    <p>
-                        Semantic retrieval achieved
-                        {semantic_support} / 3 average
-                        source support. BM25 achieved
-                        {bm25_support} / 3.
-                    </p>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <h2>
-                        Unsupported claims
-                    </h2>
-
-                    <p>
-                        Semantic answers contained
-                        {semantic_unsupported}
-                        unsupported claims and BM25
-                        answers contained
-                        {bm25_unsupported}.
-                    </p>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <h2>
-                        End-to-end response time
-                    </h2>
-
-                    <p>
-                        Semantic responses averaged
-                        {semantic_total_time}.
-                        BM25 responses averaged
-                        {bm25_total_time}.
-                    </p>
-
-                </article>
-
-
-                <article class="info-card">
-
-                    <h2>
-                        Current interpretation
-                    </h2>
-
-                    <p>
-                        Semantic retrieval performed
-                        better on retrieval quality
-                        and answer correctness in the
-                        current candidate evaluation,
-                        while BM25 produced a lower
-                        average end-to-end response
-                        time.
-                    </p>
-
-                </article>
-
+            <div class="graph-grid">
+                {graph_html}
             </div>
 
-            {graphs_section}
+        </section>
+        """,
 
-        </div>
-
-    </main>
-    """
-
-    return document(
-        content,
-        title=(
-            "Results · "
-            + APP_TITLE
-        ),
+        "Results · FastAPI Assistant",
     )
 
 
@@ -4447,6 +4731,7 @@ def results_page():
     response_class=HTMLResponse,
 )
 async def home():
+
     return home_page()
 
 
@@ -4455,56 +4740,91 @@ async def home():
     response_class=HTMLResponse,
 )
 async def ask_question(
+    request: Request,
     question: str = Form(...),
     retrieval_method: str = Form(
         "semantic"
     ),
 ):
+
     question = question.strip()
 
     if not question:
+
         return home_page(
             error=(
                 "Please enter a question."
             )
         )
 
-    valid_methods = {
-        "semantic",
-        "bm25",
-        "compare",
-    }
-
     if (
         retrieval_method
-        not in valid_methods
+        not in {
+            "semantic",
+            "bm25",
+            "compare",
+        }
     ):
+
         retrieval_method = (
             "semantic"
         )
 
     try:
-        # ----------------------------------------------------
-        # COMPARE BOTH
-        # ----------------------------------------------------
+
+        # ====================================================
+        # CURRENT USER
+        # ====================================================
+
+        user = get_logged_in_user(
+            request
+        )
+
+
+        # ====================================================
+        # COMPARE MODE
+        # ====================================================
 
         if (
             retrieval_method
             == "compare"
         ):
-            semantic_result = (
-                run_rag(
-                    question,
-                    "semantic",
-                )
+
+            semantic_result = run_rag(
+                question,
+                "semantic",
             )
 
-            bm25_result = (
-                run_rag(
-                    question,
-                    "bm25",
-                )
+            bm25_result = run_rag(
+                question,
+                "bm25",
             )
+
+
+            # -----------------------------------------------
+            # Save conversation for signed-in users
+            # -----------------------------------------------
+
+            if user:
+
+                try:
+
+                    save_compare_chat(
+                        user_id=user["id"],
+                        question=question,
+                        semantic_result=
+                            semantic_result,
+                        bm25_result=
+                            bm25_result,
+                    )
+
+                except Exception as save_error:
+
+                    print(
+                        "Could not save chat:",
+                        repr(save_error),
+                    )
+
 
             return home_page(
                 question=question,
@@ -4515,9 +4835,109 @@ async def ask_question(
                 ],
             )
 
+
+        # ====================================================
+        # SEMANTIC OR BM25
+        # ====================================================
+
+        result = run_rag(
+            question,
+            retrieval_method,
+        )
+
+
         # ----------------------------------------------------
-        # SINGLE METHOD
+        # Save conversation for signed-in users
         # ----------------------------------------------------
+
+        if user:
+
+            try:
+
+                save_rag_chat(
+                    user_id=user["id"],
+                    question=question,
+                    result=result,
+                )
+
+            except Exception as save_error:
+
+                print(
+                    "Could not save chat:",
+                    repr(save_error),
+                )
+
+
+        return home_page(
+            question=question,
+            method=retrieval_method,
+            result=result,
+        )
+
+
+    except Exception as exc:
+
+        print(
+            "RAG request error:",
+            repr(exc),
+        )
+
+        return home_page(
+            question=question,
+            method=retrieval_method,
+            error=friendly_error(
+                exc
+            ),
+        )
+
+    question = question.strip()
+
+    if not question:
+
+        return home_page(
+            error=(
+                "Please enter a question."
+            )
+        )
+
+    if (
+        retrieval_method
+        not in {
+            "semantic",
+            "bm25",
+            "compare",
+        }
+    ):
+
+        retrieval_method = (
+            "semantic"
+        )
+
+    try:
+
+        if (
+            retrieval_method
+            == "compare"
+        ):
+
+            semantic_result = run_rag(
+                question,
+                "semantic",
+            )
+
+            bm25_result = run_rag(
+                question,
+                "bm25",
+            )
+
+            return home_page(
+                question=question,
+                method="compare",
+                compare_results=[
+                    semantic_result,
+                    bm25_result,
+                ],
+            )
 
         result = run_rag(
             question,
@@ -4531,8 +4951,7 @@ async def ask_question(
         )
 
     except Exception as exc:
-        # Full technical error is printed
-        # only in the terminal.
+
         print(
             "RAG request error:",
             repr(exc),
@@ -4552,6 +4971,7 @@ async def ask_question(
     response_class=HTMLResponse,
 )
 async def about():
+
     return about_page()
 
 
@@ -4560,6 +4980,7 @@ async def about():
     response_class=HTMLResponse,
 )
 async def results():
+
     return results_page()
 
 
@@ -4569,7 +4990,8 @@ async def results():
 async def graph_file(
     filename: str,
 ):
-    allowed_files = {
+
+    allowed = {
         "retrieval_accuracy.png",
         "mean_reciprocal_rank.png",
         "answer_correctness.png",
@@ -4577,15 +4999,10 @@ async def graph_file(
         "total_response_time.png",
     }
 
-    if (
-        filename
-        not in allowed_files
-    ):
+    if filename not in allowed:
+
         raise HTTPException(
-            status_code=404,
-            detail=(
-                "Graph not found."
-            ),
+            status_code=404
         )
 
     path = (
@@ -4594,11 +5011,11 @@ async def graph_file(
     )
 
     if not path.exists():
+
         raise HTTPException(
-            status_code=404,
-            detail=(
-                "Graph not found."
-            ),
+            status_code=404
         )
 
-    return FileResponse(path)
+    return FileResponse(
+        path
+    )

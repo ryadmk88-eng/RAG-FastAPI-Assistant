@@ -7,3 +7,5 @@ __pycache__/
 data/fastapi_docs.json
 data/fastapi_chunks.json
 data/fastapi_embeddings.npy
+
+app.db
