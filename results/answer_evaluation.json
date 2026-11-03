@@ -1,0 +1,1904 @@
+{
+  "settings": {
+    "top_k": 5,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "llm_model": "gpt-6-luna"
+  },
+  "answers": [
+    {
+      "id": "Q01",
+      "question": "How do I handle request validation errors in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "FastAPI raises RequestValidationError for invalid request data",
+        "A custom handler can be registered with app.exception_handler",
+        "Validation errors can be inspected from the exception"
+      ],
+      "answer": "FastAPI raises `RequestValidationError` when a request contains invalid data and handles it with a default exception handler. To customize the response, register your own handler with `@app.exception_handler(RequestValidationError)`. It receives the request and exception; `exc.errors()` provides the validation errors. [Source 1]\n\n```python\nfrom fastapi import FastAPI, Request\nfrom fastapi.exceptions import RequestValidationError\nfrom fastapi.responses import PlainTextResponse\n\napp = FastAPI()\n\n@app.exception_handler(RequestValidationError)\nasync def validation_exception_handler(\n    request: Request, exc: RequestValidationError\n):\n    message = \"Validation errors:\"\n    for error in exc.errors():\n        message += f\"\\n Field: {error['loc']}, Error: {error['msg']}\"\n\n    return PlainTextResponse(message, status_code=400)\n```\n\nThe example returns a plain-text response with status code `400`; you can choose how to format your custom response. The exception also contains the invalid request body, which can be useful for debugging. Avoid returning `str(exc)` directly: it can include file and line information about your system. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Handling Errors",
+          "url": "https://fastapi.tiangolo.com/tutorial/handling-errors/"
+        },
+        {
+          "source_number": 2,
+          "title": "APIRouter class",
+          "url": "https://fastapi.tiangolo.com/reference/apirouter/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "https://fastapi.tiangolo.com/reference/apirouter/",
+        "https://fastapi.tiangolo.com/reference/apirouter/"
+      ],
+      "retrieval_time_ms": 18.32,
+      "generation_time_ms": 6696.69,
+      "total_time_ms": 6715.0,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported by the Handling Errors documentation; clearly explains the exception, custom handler, and inspection of validation errors."
+      }
+    },
+    {
+      "id": "Q02",
+      "question": "How do I send JSON data in the body of a FastAPI request?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Request bodies are commonly declared using Pydantic models",
+        "The model defines the expected request data",
+        "FastAPI validates incoming request-body data"
+      ],
+      "answer": "Declare the request body using a **Pydantic model**, then send the JSON data in the body of a request. `POST` is the most common method; `PUT`, `DELETE`, and `PATCH` are also listed for sending data. [Source 3]\n\nInclude a `Content-Type: application/json` header: by default, FastAPI does not parse a body as JSON if the request has no `Content-Type` header. [Source 5]\n\nThe supplied documentation doesn’t include a code example showing the model or a client request.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "FastAPI",
+          "url": "https://fastapi.tiangolo.com/"
+        },
+        {
+          "source_number": 2,
+          "title": "Request Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-files/"
+        },
+        {
+          "source_number": 3,
+          "title": "Request Body",
+          "url": "https://fastapi.tiangolo.com/tutorial/body/"
+        },
+        {
+          "source_number": 4,
+          "title": "Using the Request Directly",
+          "url": "https://fastapi.tiangolo.com/advanced/using-request-directly/"
+        },
+        {
+          "source_number": 5,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/tutorial/body/",
+        "https://fastapi.tiangolo.com/advanced/using-request-directly/",
+        "https://fastapi.tiangolo.com/reference/fastapi/"
+      ],
+      "retrieval_time_ms": 13.55,
+      "generation_time_ms": 6087.18,
+      "total_time_ms": 6100.73,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correctly identifies Pydantic models for request bodies, but does not clearly explain that the model defines the expected structure and that FastAPI validates the incoming data."
+      }
+    },
+    {
+      "id": "Q03",
+      "question": "How do I create a path parameter in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Path parameters are declared inside the route path",
+        "The corresponding function parameter receives the value",
+        "Python type annotations can be used for validation"
+      ],
+      "answer": "Put the parameter name in curly braces in the route path, then declare an argument with the same name in the endpoint function. For example:\n\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get(\"/items/{item_id}\")\nasync def read_item(item_id: int):\n    return {\"item_id\": item_id}\n```\n\nFastAPI can also use `Path(...)` to declare additional metadata or validation for a path parameter. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Path Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/path-params/"
+        },
+        {
+          "source_number": 2,
+          "title": "Request Parameters",
+          "url": "https://fastapi.tiangolo.com/reference/parameters/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI CLI",
+          "url": "https://fastapi.tiangolo.com/fastapi-cli/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/path-params/",
+        "https://fastapi.tiangolo.com/reference/parameters/",
+        "https://fastapi.tiangolo.com/fastapi-cli/",
+        "https://fastapi.tiangolo.com/tutorial/path-params/",
+        "https://fastapi.tiangolo.com/reference/parameters/"
+      ],
+      "retrieval_time_ms": 12.14,
+      "generation_time_ms": 3671.81,
+      "total_time_ms": 3683.95,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and well supported; clearly shows route declaration, matching function parameter, and type-based validation."
+      }
+    },
+    {
+      "id": "Q04",
+      "question": "How do query parameters work in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Function parameters not included in the path can become query parameters",
+        "Type annotations are used for conversion and validation",
+        "Default values can make query parameters optional"
+      ],
+      "answer": "The provided documentation shows that a query parameter can have a default value: for the `short` example, omitting it uses `False`. An empty value (`?short=`) or an unrecognized value such as `?short=maybe` produces a 422 validation error. [Source 2]\n\nFastAPI’s `Query` parameters can also define validation, such as numeric bounds (`gt`, `ge`, `lt`, `le`), string length limits, and regular-expression patterns. [Source 1] You can also declare query parameters using Pydantic models. [Source 3]\n\nThe supplied excerpts don’t explain the full mechanics of declaring query parameters or how values are converted for different types.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Request Parameters",
+          "url": "https://fastapi.tiangolo.com/reference/parameters/"
+        },
+        {
+          "source_number": 2,
+          "title": "Query Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/query-params/"
+        },
+        {
+          "source_number": 3,
+          "title": "Query Parameter Models",
+          "url": "https://fastapi.tiangolo.com/tutorial/query-param-models/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/reference/parameters/",
+        "https://fastapi.tiangolo.com/tutorial/query-params/",
+        "https://fastapi.tiangolo.com/reference/parameters/",
+        "https://fastapi.tiangolo.com/tutorial/query-param-models/",
+        "https://fastapi.tiangolo.com/reference/parameters/"
+      ],
+      "retrieval_time_ms": 9.59,
+      "generation_time_ms": 4202.21,
+      "total_time_ms": 4211.8,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Partly correct and well supported, but it does not explain the main query-parameter declaration rule or how type annotations are used for conversion and validation."
+      }
+    },
+    {
+      "id": "Q05",
+      "question": "How can I use dependency injection in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Dependencies can be declared with Depends",
+        "FastAPI calls the dependency and injects its result",
+        "Dependencies can be reused across endpoints"
+      ],
+      "answer": "Declare a callable dependency, then use `Depends()` in your path operation. FastAPI runs the dependency and injects its result when it calls the path operation. [Source 2] `Depends` is imported from `fastapi` and takes a callable. [Source 3]\n\n```python\nfrom fastapi import Depends, FastAPI\n\napp = FastAPI()\n\ndef get_value():\n    return \"provided value\"\n\n@app.get(\"/\")\ndef read_value(value: str = Depends(get_value)):\n    return {\"value\": value}\n```\n\nDependencies can provide shared logic, database connections, or security and authentication checks. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Features",
+          "url": "https://fastapi.tiangolo.com/features/"
+        },
+        {
+          "source_number": 2,
+          "title": "Dependencies",
+          "url": "https://fastapi.tiangolo.com/tutorial/dependencies/"
+        },
+        {
+          "source_number": 3,
+          "title": "Dependencies - Depends() and Security()",
+          "url": "https://fastapi.tiangolo.com/reference/dependencies/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/features/",
+        "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "https://fastapi.tiangolo.com/reference/dependencies/"
+      ],
+      "retrieval_time_ms": 8.98,
+      "generation_time_ms": 3987.1,
+      "total_time_ms": 3996.08,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correct use of Depends and dependency injection, with good source support. Minor omission: reuse across multiple endpoints is only implied through shared logic rather than stated clearly."
+      }
+    },
+    {
+      "id": "Q06",
+      "question": "How do I use a response model in FastAPI to control and filter the data returned by an endpoint?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "A response model defines the expected output structure",
+        "FastAPI validates and filters returned data using the response model",
+        "Fields not included in the response model can be excluded from the response"
+      ],
+      "answer": "Declare a response model on your path operation, typically with `response_model=YourModel`. FastAPI filters the returned data to include only fields declared in that model—even if your function returns additional fields. The response model also supports data validation and documentation. [Source 1]\n\nFor example, if your function returns a model containing both public and private fields, use a response model that declares only the public fields; the response will omit the rest. [Source 1]\n\nYou can also use `response_model=None` to disable the response model for a path operation. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Response Model - Return Type",
+          "url": "https://fastapi.tiangolo.com/tutorial/response-model/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 3,
+          "title": "Return a Response Directly",
+          "url": "https://fastapi.tiangolo.com/advanced/response-directly/"
+        },
+        {
+          "source_number": 4,
+          "title": "Response class",
+          "url": "https://fastapi.tiangolo.com/reference/response/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/response-model/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/advanced/response-directly/",
+        "https://fastapi.tiangolo.com/reference/response/",
+        "https://fastapi.tiangolo.com/tutorial/response-model/"
+      ],
+      "retrieval_time_ms": 11.16,
+      "generation_time_ms": 2321.06,
+      "total_time_ms": 2332.22,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and well supported; clearly explains response_model structure, validation/filtering, and exclusion of extra fields."
+      }
+    },
+    {
+      "id": "Q07",
+      "question": "How can I receive multiple values in a FastAPI request body?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Multiple body parameters can be declared",
+        "Body can be used to explicitly declare request-body values",
+        "Pydantic models and individual body values can be combined"
+      ],
+      "answer": "Declare each body value as a parameter in your path operation. FastAPI combines them into one request body, using the parameter names as JSON keys, then extracts and validates each value. [Source 1]\n\nFor example, if your parameters are `item` and `user`, send a body shaped like:\n\n```json\n{\n  \"item\": { \"name\": \"Foo\", \"price\": 42.0 },\n  \"user\": { \"username\": \"dave\" }\n}\n```\n\nFastAPI passes each nested value to its corresponding parameter and documents the schema. [Source 1]\n\nThe supplied documentation doesn’t explain how to receive repeated values as a list *within* a request body.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Body - Multiple Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI",
+          "url": "https://fastapi.tiangolo.com/"
+        },
+        {
+          "source_number": 3,
+          "title": "Query Parameters and String Validations",
+          "url": "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/"
+        },
+        {
+          "source_number": 4,
+          "title": "Header Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/header-params/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "https://fastapi.tiangolo.com/",
+        "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
+        "https://fastapi.tiangolo.com/tutorial/header-params/"
+      ],
+      "retrieval_time_ms": 10.97,
+      "generation_time_ms": 3511.94,
+      "total_time_ms": 3522.91,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Clearly explains multiple body parameters and validation, but does not explicitly show Body usage or combining a Pydantic model with an individual body value."
+      }
+    },
+    {
+      "id": "Q08",
+      "question": "How do I run code when a FastAPI application starts or shuts down?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Application startup and shutdown behavior can be managed",
+        "Lifespan functionality can be used for application lifecycle logic",
+        "Resources can be initialized and cleaned up around application execution"
+      ],
+      "answer": "Use a **lifespan handler**—the recommended approach. Pass a lifespan context manager to `FastAPI`; it replaces separate startup and shutdown handlers. The supplied documentation doesn’t include the context manager’s implementation syntax. [Source 1] [Source 2]\n\nThe older `@app.on_event(\"startup\")` and `@app.on_event(\"shutdown\")` approach is deprecated. Event-handler functions can be declared with `async def` or `def`, but don’t combine them with a lifespan handler: when lifespan is provided, the event handlers aren’t called. [Source 1] [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Lifespan Events",
+          "url": "https://fastapi.tiangolo.com/advanced/events/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI CLI",
+          "url": "https://fastapi.tiangolo.com/fastapi-cli/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/events/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/fastapi-cli/"
+      ],
+      "retrieval_time_ms": 13.85,
+      "generation_time_ms": 4854.87,
+      "total_time_ms": 4868.72,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Explains lifespan and startup/shutdown handling, but does not clearly describe resource initialization before startup and cleanup during shutdown."
+      }
+    },
+    {
+      "id": "Q09",
+      "question": "How can I return a custom HTTP status code in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Different HTTP status codes can be returned when required",
+        "A Response or JSONResponse can be returned directly",
+        "The response can specify its own status code"
+      ],
+      "answer": "Set the path operation’s `status_code` to the code you want. You can use an integer or a named constant from `fastapi.status`, such as `status.HTTP_200_OK`. [Source 1] [Source 2]\n\nYou can also return a response directly to override the configured status code. [Source 3]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Additional Status Codes",
+          "url": "https://fastapi.tiangolo.com/advanced/additional-status-codes/"
+        },
+        {
+          "source_number": 2,
+          "title": "Status Codes",
+          "url": "https://fastapi.tiangolo.com/reference/status/"
+        },
+        {
+          "source_number": 3,
+          "title": "APIRouter class",
+          "url": "https://fastapi.tiangolo.com/reference/apirouter/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
+        "https://fastapi.tiangolo.com/reference/status/",
+        "https://fastapi.tiangolo.com/reference/apirouter/",
+        "https://fastapi.tiangolo.com/reference/apirouter/",
+        "https://fastapi.tiangolo.com/reference/apirouter/"
+      ],
+      "retrieval_time_ms": 9.09,
+      "generation_time_ms": 4798.95,
+      "total_time_ms": 4808.04,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Explains custom status codes and direct responses, but does not explicitly show Response/JSONResponse specifying its own status_code."
+      }
+    },
+    {
+      "id": "Q10",
+      "question": "How do I deploy a FastAPI application using Docker?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "A Docker image can contain the FastAPI application",
+        "Dependencies and application files are copied into the image",
+        "The application server is started inside the container"
+      ],
+      "answer": "Build a Linux container image for your FastAPI application, typically using Docker and based on the official Python image. [Source 1] Once you have the image, you can deploy it with Docker Compose on a single server, Kubernetes, Docker Swarm, Nomad, or a cloud service that accepts container images. [Source 1]\n\nThe supplied documentation excerpt does not include the Dockerfile contents or commands for building and running the image.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/deployment/docker/"
+      ],
+      "retrieval_time_ms": 12.65,
+      "generation_time_ms": 2909.01,
+      "total_time_ms": 2921.66,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Partly correct and fully supported, but missing the Dockerfile steps for copying dependencies/application files and starting the FastAPI server inside the container."
+      }
+    },
+    {
+      "id": "Q11",
+      "question": "How do I upload files to a FastAPI endpoint?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Files can be received using File",
+        "UploadFile can be used for uploaded files",
+        "Uploaded files are sent as form data"
+      ],
+      "answer": "Use `UploadFile` as a path operation parameter to receive an uploaded file:\n\n```python\nfrom fastapi import FastAPI, UploadFile\n\napp = FastAPI()\n\n@app.post(\"/uploadfile/\")\nasync def create_upload_file(file: UploadFile):\n    return {\"filename\": file.filename}\n```\n\nFastAPI receives uploaded files as **form data**. If you instead want the file contents as `bytes`, declare the parameter with `File()`:\n\n```python\nfrom typing import Annotated\nfrom fastapi import File\n\n@app.post(\"/files/\")\nasync def create_file(file: Annotated[bytes, File()]):\n    return {\"file_size\": len(file)}\n```\n\nWith `bytes`, the whole file is stored in memory, which the docs say works well for small files. [Source 1] [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "UploadFile class",
+          "url": "https://fastapi.tiangolo.com/reference/uploadfile/"
+        },
+        {
+          "source_number": 2,
+          "title": "Request Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-files/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/reference/uploadfile/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/reference/uploadfile/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/"
+      ],
+      "retrieval_time_ms": 10.65,
+      "generation_time_ms": 4233.22,
+      "total_time_ms": 4243.87,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and well supported; clearly explains File, UploadFile, and form-data file uploads."
+      }
+    },
+    {
+      "id": "Q12",
+      "question": "How can a FastAPI endpoint receive form data instead of JSON?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Form data can be declared using Form",
+        "Form fields are received differently from JSON request bodies",
+        "Form parameters can be validated by FastAPI"
+      ],
+      "answer": "Declare the endpoint’s inputs as form fields using `Form` rather than expecting JSON in the request body. FastAPI then reads the data from the form encoding: typically `application/x-www-form-urlencoded`, or `multipart/form-data` when files are included. [Source 1]\n\nYou can’t also expect JSON `Body` fields in the same request, because the form encoding is not `application/json`. [Source 1]\n\nThe supplied documentation does not include the exact `Form` parameter syntax or an example.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Request Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-files/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI",
+          "url": "https://fastapi.tiangolo.com/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/fastapi/"
+      ],
+      "retrieval_time_ms": 9.85,
+      "generation_time_ms": 4082.41,
+      "total_time_ms": 4092.26,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correctly explains Form-based input and the difference from JSON request bodies, but does not explain validation of form parameters."
+      }
+    },
+    {
+      "id": "Q13",
+      "question": "How do I run a task after returning a response from FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "BackgroundTasks can schedule work after returning a response",
+        "A background task can be added inside a path operation",
+        "Background work can avoid delaying the response for small tasks"
+      ],
+      "answer": "Use FastAPI’s `BackgroundTasks`: add it as a path-operation parameter, then call `add_task()` with the function and its arguments. FastAPI runs the function after sending the response. The function can be a regular `def` or an `async def`. [Source 1]\n\n```python\nfrom fastapi import BackgroundTasks, FastAPI\n\napp = FastAPI()\n\ndef process_task(item_id: str):\n    # Do work here\n    pass\n\n@app.post(\"/items/{item_id}\")\ndef create_item(item_id: str, background_tasks: BackgroundTasks):\n    background_tasks.add_task(process_task, item_id)\n    return {\"item_id\": item_id}\n```",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Background Tasks - BackgroundTasks",
+          "url": "https://fastapi.tiangolo.com/reference/background/"
+        },
+        {
+          "source_number": 2,
+          "title": "Response - Change Status Code",
+          "url": "https://fastapi.tiangolo.com/advanced/response-change-status-code/"
+        },
+        {
+          "source_number": 3,
+          "title": "Additional Status Codes",
+          "url": "https://fastapi.tiangolo.com/advanced/additional-status-codes/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/reference/background/",
+        "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
+        "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
+        "https://fastapi.tiangolo.com/reference/background/",
+        "https://fastapi.tiangolo.com/advanced/additional-status-codes/"
+      ],
+      "retrieval_time_ms": 11.34,
+      "generation_time_ms": 3613.91,
+      "total_time_ms": 3625.24,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correct and well supported. Explains BackgroundTasks and scheduling work after the response, but does not explicitly mention avoiding response delay for small tasks."
+      }
+    },
+    {
+      "id": "Q14",
+      "question": "How do I allow requests from another frontend domain using CORS in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "CORSMiddleware can configure cross-origin requests",
+        "Allowed origins can be specified",
+        "Methods, headers and credentials can be configured"
+      ],
+      "answer": "Add `CORSMiddleware` to your FastAPI app and list the frontend’s origin in `allow_origins`:\n\n```python\nfrom fastapi import FastAPI\nfrom fastapi.middleware.cors import CORSMiddleware\n\napp = FastAPI()\n\norigins = [\"https://your-frontend.example\"]\n\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=origins,\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n```\n\nReplace the example origin with the frontend domain you want to permit. FastAPI’s CORS settings are restrictive by default, so explicitly allow the origins, methods, and headers your frontend needs. [Source 1]\n\nIf you use `allow_origins=[\"*\"]`, requests involving credentials—such as cookies or `Authorization` headers—aren’t allowed; specify origins explicitly when those are needed. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "CORS (Cross-Origin Resource Sharing)",
+          "url": "https://fastapi.tiangolo.com/tutorial/cors/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/cors/",
+        "https://fastapi.tiangolo.com/tutorial/cors/",
+        "https://fastapi.tiangolo.com/tutorial/cors/",
+        "https://fastapi.tiangolo.com/tutorial/cors/",
+        "https://fastapi.tiangolo.com/tutorial/cors/"
+      ],
+      "retrieval_time_ms": 12.53,
+      "generation_time_ms": 4549.18,
+      "total_time_ms": 4561.71,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported by the CORS documentation, including origin, credentials, methods, and headers configuration."
+      }
+    },
+    {
+      "id": "Q15",
+      "question": "How do I add middleware to a FastAPI application?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Middleware can run logic before and after a request",
+        "Middleware receives the request and calls the next handler",
+        "Middleware can modify or inspect requests and responses"
+      ],
+      "answer": "Use the application’s `add_middleware()` method:\n\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI()\napp.add_middleware(MiddlewareClass, ...)\n```\n\nFastAPI provides some middleware for convenience; many available middleware classes come directly from Starlette. [Source 1] The supplied documentation doesn’t include the full method signature or a complete example of custom middleware. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Advanced Middleware",
+          "url": "https://fastapi.tiangolo.com/advanced/middleware/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 3,
+          "title": "Middleware",
+          "url": "https://fastapi.tiangolo.com/reference/middleware/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/middleware/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/advanced/middleware/",
+        "https://fastapi.tiangolo.com/reference/middleware/",
+        "https://fastapi.tiangolo.com/advanced/middleware/"
+      ],
+      "retrieval_time_ms": 13.46,
+      "generation_time_ms": 3465.02,
+      "total_time_ms": 3478.48,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Partly correct and fully supported. Shows how to add middleware, but does not explain middleware request/response flow, calling the next handler, or inspecting/modifying requests and responses."
+      }
+    },
+    {
+      "id": "Q16",
+      "question": "How can FastAPI serve static files such as CSS or images?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "StaticFiles can be mounted on the FastAPI application",
+        "A directory can contain static content",
+        "Static content can be exposed under a URL path"
+      ],
+      "answer": "Use `StaticFiles` and mount it at a URL path, pointing it to the directory containing your files:\n\n```python\nfrom fastapi import FastAPI\nfrom fastapi.staticfiles import StaticFiles\n\napp = FastAPI()\napp.mount(\"/static\", StaticFiles(directory=\"static\"), name=\"static\")\n```\n\nFiles in the `static` directory are then served under paths beginning with `/static`—for example, a file at `static/style.css` is available at `/static/style.css`. You can choose different mount paths, directory names, and mount names to suit your app. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Static Files - StaticFiles",
+          "url": "https://fastapi.tiangolo.com/reference/staticfiles/"
+        },
+        {
+          "source_number": 2,
+          "title": "Static Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/static-files/"
+        },
+        {
+          "source_number": 3,
+          "title": "Custom Docs UI Static Assets (Self-Hosting)",
+          "url": "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/reference/staticfiles/",
+        "https://fastapi.tiangolo.com/tutorial/static-files/",
+        "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+        "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+        "https://fastapi.tiangolo.com/tutorial/static-files/"
+      ],
+      "retrieval_time_ms": 11.41,
+      "generation_time_ms": 2440.21,
+      "total_time_ms": 2451.61,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported; clearly explains mounting StaticFiles, the static directory, and the URL path used to serve files."
+      }
+    },
+    {
+      "id": "Q17",
+      "question": "How do I create a WebSocket endpoint in FastAPI?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "FastAPI supports WebSocket routes",
+        "The WebSocket connection must be accepted",
+        "Messages can be sent and received over the connection"
+      ],
+      "answer": "Create a WebSocket route with `@app.websocket`, accept the connection, and define an async endpoint that receives a `WebSocket` parameter:\n\n```python\nfrom fastapi import FastAPI, WebSocket\n\napp = FastAPI()\n\n@app.websocket(\"/ws\")\nasync def websocket_endpoint(websocket: WebSocket):\n    await websocket.accept()\n```\n\nThe supplied documentation shows the `/ws` route pattern and accepting the connection. It doesn’t include enough detail to specify how to receive or send messages. [Source 2]\n\nThe docs also recommend adding the `websockets` package with `uv add websockets`. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "WebSockets",
+          "url": "https://fastapi.tiangolo.com/advanced/websockets/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 3,
+          "title": "APIRouter class",
+          "url": "https://fastapi.tiangolo.com/reference/apirouter/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/websockets/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/apirouter/"
+      ],
+      "retrieval_time_ms": 9.97,
+      "generation_time_ms": 4898.7,
+      "total_time_ms": 4908.67,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correctly explains creating and accepting a WebSocket connection, but does not explain sending and receiving messages."
+      }
+    },
+    {
+      "id": "Q18",
+      "question": "How do I test a FastAPI application?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "FastAPI applications can be tested using TestClient",
+        "Tests can send requests to application routes",
+        "Responses and status codes can be asserted"
+      ],
+      "answer": "Use FastAPI’s `TestClient` to test your app without opening a real HTTP or socket connection; it communicates directly with the FastAPI code. Import it with:\n\n```python\nfrom fastapi.testclient import TestClient\n```\n\n[Source 2]\n\nYou can keep tests in a separate file from your application. [Source 3] FastAPI also supports asynchronous tests, which can be useful when testing work involving an async database library. [Source 4]\n\nThe supplied documentation does not include the full `TestClient` setup or an example of sending a request and checking the result, so I can’t provide those exact steps from these sources. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "About FastAPI versions",
+          "url": "https://fastapi.tiangolo.com/deployment/versions/"
+        },
+        {
+          "source_number": 2,
+          "title": "Test Client - TestClient",
+          "url": "https://fastapi.tiangolo.com/reference/testclient/"
+        },
+        {
+          "source_number": 3,
+          "title": "Testing",
+          "url": "https://fastapi.tiangolo.com/tutorial/testing/"
+        },
+        {
+          "source_number": 4,
+          "title": "Async Tests",
+          "url": "https://fastapi.tiangolo.com/advanced/async-tests/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/deployment/versions/",
+        "https://fastapi.tiangolo.com/reference/testclient/",
+        "https://fastapi.tiangolo.com/tutorial/testing/",
+        "https://fastapi.tiangolo.com/deployment/versions/",
+        "https://fastapi.tiangolo.com/advanced/async-tests/"
+      ],
+      "retrieval_time_ms": 9.99,
+      "generation_time_ms": 5113.69,
+      "total_time_ms": 5123.69,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correctly identifies TestClient, but does not explain how to send requests or assert response data and status codes."
+      }
+    },
+    {
+      "id": "Q19",
+      "question": "How can I add metadata such as a title and description to my FastAPI application?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "Application metadata can be configured when creating FastAPI",
+        "Metadata can include a title and description",
+        "Metadata is used in generated API documentation"
+      ],
+      "answer": "Pass `title` and `description` when creating your `FastAPI` app:\n\n```python\nfrom fastapi import FastAPI\n\napp = FastAPI(\n    title=\"My API\",\n    description=\"An API for managing items.\",\n)\n```\n\nThe description supports Markdown, and this metadata is added to the generated OpenAPI schema, visible in `/docs`. [Source 1] [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Metadata and Docs URLs",
+          "url": "https://fastapi.tiangolo.com/tutorial/metadata/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 3,
+          "title": "Path Operation Configuration",
+          "url": "https://fastapi.tiangolo.com/tutorial/path-operation-configuration/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/metadata/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/tutorial/metadata/",
+        "https://fastapi.tiangolo.com/tutorial/path-operation-configuration/",
+        "https://fastapi.tiangolo.com/reference/fastapi/"
+      ],
+      "retrieval_time_ms": 8.84,
+      "generation_time_ms": 3050.43,
+      "total_time_ms": 3059.27,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported by the metadata documentation; clearly shows title and description configuration and explains their use in generated API docs."
+      }
+    },
+    {
+      "id": "Q20",
+      "question": "How do I secure a FastAPI API using OAuth2 with JWT tokens?",
+      "retrieval_method": "semantic",
+      "key_points": [
+        "OAuth2 can be used for authentication",
+        "JWT tokens can represent authenticated users",
+        "Tokens are created and validated as part of the authentication flow"
+      ],
+      "answer": "A typical flow is:\n\n1. Use OAuth2’s **password flow** with bearer tokens. The client sends the username and password to your token endpoint; the API checks them and returns a token. [Source 1]\n2. Return a JSON response containing `access_token` and `token_type: \"bearer\"`. [Source 3]\n3. Use `OAuth2PasswordBearer` to support bearer-token authentication. The client sends the token on later requests in the `Authorization` header as `Bearer <token>`. [Source 1]\n4. For a secure implementation, use password hashing and JWT tokens. FastAPI’s documentation describes using packages such as `pwdlib` and `PyJWT`. [Source 2]\n\nThe supplied documentation excerpt does not include the code or detailed steps for creating, signing, decoding, or validating JWTs, so it isn’t sufficient to provide a complete implementation. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Security - First Steps",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/first-steps/"
+        },
+        {
+          "source_number": 2,
+          "title": "OAuth2 with Password (and hashing), Bearer with JWT tokens",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/"
+        },
+        {
+          "source_number": 3,
+          "title": "Simple OAuth2 with Password and Bearer",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
+        "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/",
+        "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "https://fastapi.tiangolo.com/tutorial/security/first-steps/"
+      ],
+      "retrieval_time_ms": 11.2,
+      "generation_time_ms": 4079.83,
+      "total_time_ms": 4091.02,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and well supported. Explains OAuth2 bearer authentication and JWT use, but does not cover JWT creation and validation in enough detail."
+      }
+    },
+    {
+      "id": "Q01",
+      "question": "How do I handle request validation errors in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "FastAPI raises RequestValidationError for invalid request data",
+        "A custom handler can be registered with app.exception_handler",
+        "Validation errors can be inspected from the exception"
+      ],
+      "answer": "FastAPI raises a `RequestValidationError` when request data is invalid and provides a default handler. To customize the response, register an exception handler for that exception. The handler receives the request and the exception; you can inspect validation details with `exc.errors()` and return your own response. [Source 3]\n\n```python\nfrom fastapi import FastAPI\nfrom fastapi.exceptions import RequestValidationError\nfrom fastapi.responses import PlainTextResponse\n\napp = FastAPI()\n\n@app.exception_handler(RequestValidationError)\nasync def validation_exception_handler(request, exc: RequestValidationError):\n    message = \"Validation errors:\"\n    for error in exc.errors():\n        message += f\"\\nField: {error['loc']}, Error: {error['msg']}\"\n    return PlainTextResponse(message, status_code=400)\n```\n\nThe documentation also shows accessing the request body while handling this exception. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Custom Request and APIRoute class",
+          "url": "https://fastapi.tiangolo.com/how-to/custom-request-and-route/"
+        },
+        {
+          "source_number": 2,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 3,
+          "title": "Handling Errors",
+          "url": "https://fastapi.tiangolo.com/tutorial/handling-errors/"
+        },
+        {
+          "source_number": 4,
+          "title": "APIRouter class",
+          "url": "https://fastapi.tiangolo.com/reference/apirouter/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/how-to/custom-request-and-route/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "https://fastapi.tiangolo.com/reference/apirouter/",
+        "https://fastapi.tiangolo.com/tutorial/handling-errors/"
+      ],
+      "retrieval_time_ms": 7.53,
+      "generation_time_ms": 4203.69,
+      "total_time_ms": 4211.23,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported; clearly explains RequestValidationError, custom exception handlers, and inspecting validation errors with exc.errors()."
+      }
+    },
+    {
+      "id": "Q02",
+      "question": "How do I send JSON data in the body of a FastAPI request?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Request bodies are commonly declared using Pydantic models",
+        "The model defines the expected request data",
+        "FastAPI validates incoming request-body data"
+      ],
+      "answer": "Use an HTTP client’s `json` parameter and pass it a Python object, such as a dictionary:\n\n```python\nresponse = client.post(\"/items/\", json={\"name\": \"Widget\", \"price\": 10})\n```\n\nFastAPI’s testing documentation shows this approach for sending a JSON request body. [Source 1]\n\nFor the API endpoint, FastAPI uses a Pydantic model to declare the request body. [Source 3]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Testing",
+          "url": "https://fastapi.tiangolo.com/tutorial/testing/"
+        },
+        {
+          "source_number": 2,
+          "title": "APIRouter class",
+          "url": "https://fastapi.tiangolo.com/reference/apirouter/"
+        },
+        {
+          "source_number": 3,
+          "title": "Request Body",
+          "url": "https://fastapi.tiangolo.com/tutorial/body/"
+        },
+        {
+          "source_number": 4,
+          "title": "Path Operation Advanced Configuration",
+          "url": "https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/"
+        },
+        {
+          "source_number": 5,
+          "title": "Request Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-files/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/testing/",
+        "https://fastapi.tiangolo.com/reference/apirouter/",
+        "https://fastapi.tiangolo.com/tutorial/body/",
+        "https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/"
+      ],
+      "retrieval_time_ms": 12.36,
+      "generation_time_ms": 2344.49,
+      "total_time_ms": 2356.85,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correctly explains how to send JSON and identifies Pydantic models for request bodies, but does not clearly explain the expected data structure or FastAPI's automatic validation."
+      }
+    },
+    {
+      "id": "Q03",
+      "question": "How do I create a path parameter in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Path parameters are declared inside the route path",
+        "The corresponding function parameter receives the value",
+        "Python type annotations can be used for validation"
+      ],
+      "answer": "The supplied documentation doesn’t explain how to define a path parameter in a FastAPI route. It only notes that, when making a request, you pass a path parameter in the URL itself. [Source 4]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 3,
+          "title": "Dependencies",
+          "url": "https://fastapi.tiangolo.com/tutorial/dependencies/"
+        },
+        {
+          "source_number": 4,
+          "title": "Testing",
+          "url": "https://fastapi.tiangolo.com/tutorial/testing/"
+        },
+        {
+          "source_number": 5,
+          "title": "Generating SDKs",
+          "url": "https://fastapi.tiangolo.com/advanced/generate-clients/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "https://fastapi.tiangolo.com/tutorial/testing/",
+        "https://fastapi.tiangolo.com/advanced/generate-clients/"
+      ],
+      "retrieval_time_ms": 7.7,
+      "generation_time_ms": 2543.33,
+      "total_time_ms": 2551.03,
+      "manual_evaluation": {
+        "correctness_score": 0,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Faithful to the retrieved context, but the retrieval missed the path-parameters documentation, so the answer does not explain how to create a path parameter."
+      }
+    },
+    {
+      "id": "Q04",
+      "question": "How do query parameters work in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Function parameters not included in the path can become query parameters",
+        "Type annotations are used for conversion and validation",
+        "Default values can make query parameters optional"
+      ],
+      "answer": "Query parameters are values supplied in the URL after `?`. For example, in `/items/foo-item?needy=sooooneedy`, `needy` is a query parameter, while `foo-item` is the path value for `item_id`. [Source 1]\n\nIn a FastAPI endpoint, parameters that aren’t part of the path can be declared as required or given defaults. In the example, `needy: str` is required, `skip: int = 0` has a default, and `limit: int | None = None` is optional. If a required query parameter is missing, FastAPI returns an error indicating that the query field is required. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Query Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/query-params/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 3,
+          "title": "Concurrency and async / await",
+          "url": "https://fastapi.tiangolo.com/async/"
+        },
+        {
+          "source_number": 4,
+          "title": "Body - Multiple Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/"
+        },
+        {
+          "source_number": 5,
+          "title": "Advanced Dependencies",
+          "url": "https://fastapi.tiangolo.com/advanced/advanced-dependencies/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/query-params/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/async/",
+        "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "https://fastapi.tiangolo.com/advanced/advanced-dependencies/"
+      ],
+      "retrieval_time_ms": 7.51,
+      "generation_time_ms": 3750.4,
+      "total_time_ms": 3757.91,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and well supported. Clearly explains required and optional query parameters, but does not explicitly explain type-based conversion and validation."
+      }
+    },
+    {
+      "id": "Q05",
+      "question": "How can I use dependency injection in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Dependencies can be declared with Depends",
+        "FastAPI calls the dependency and injects its result",
+        "Dependencies can be reused across endpoints"
+      ],
+      "answer": "Declare that a path operation depends on another function or component. FastAPI runs that dependency before the path operation and injects its result; dependencies can also depend on other dependencies. [Source 5]\n\nDependencies can be used at multiple levels, including in path operation functions, dependencies, and sub-dependencies. For example, the docs note that `BackgroundTasks` can be declared at these levels, with FastAPI reusing the same object and merging the tasks. [Source 1]\n\nThe supplied documentation doesn’t include a complete example showing the syntax for declaring a dependency with `Depends`.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Background Tasks",
+          "url": "https://fastapi.tiangolo.com/tutorial/background-tasks/"
+        },
+        {
+          "source_number": 2,
+          "title": "Alternatives, Inspiration and Comparisons",
+          "url": "https://fastapi.tiangolo.com/alternatives/"
+        },
+        {
+          "source_number": 3,
+          "title": "Security - First Steps",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/first-steps/"
+        },
+        {
+          "source_number": 4,
+          "title": "Features",
+          "url": "https://fastapi.tiangolo.com/features/"
+        },
+        {
+          "source_number": 5,
+          "title": "Dependencies",
+          "url": "https://fastapi.tiangolo.com/tutorial/dependencies/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/background-tasks/",
+        "https://fastapi.tiangolo.com/alternatives/",
+        "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
+        "https://fastapi.tiangolo.com/features/",
+        "https://fastapi.tiangolo.com/tutorial/dependencies/"
+      ],
+      "retrieval_time_ms": 9.71,
+      "generation_time_ms": 4210.88,
+      "total_time_ms": 4220.58,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correct explanation of dependency execution and injection, but missing Depends syntax and clear reuse across endpoints."
+      }
+    },
+    {
+      "id": "Q06",
+      "question": "How do I use a response model in FastAPI to control and filter the data returned by an endpoint?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "A response model defines the expected output structure",
+        "FastAPI validates and filters returned data using the response model",
+        "Fields not included in the response model can be excluded from the response"
+      ],
+      "answer": "Declare a `response_model` on the path operation. It can be a Pydantic model or a list of models. FastAPI uses it to document, validate, convert, and filter the returned data. [Source 2]\n\n```python\n@app.get(\"/users/{user_id}\", response_model=PublicUser)\ndef get_user(user_id: int):\n    return user_with_private_fields\n```\n\nEven if the endpoint returns additional fields, the response includes only fields declared in `PublicUser`. [Source 2]\n\nIf you declare both a function return type and `response_model`, FastAPI uses `response_model` for the response. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Response Headers",
+          "url": "https://fastapi.tiangolo.com/advanced/response-headers/"
+        },
+        {
+          "source_number": 2,
+          "title": "Response Model - Return Type",
+          "url": "https://fastapi.tiangolo.com/tutorial/response-model/"
+        },
+        {
+          "source_number": 3,
+          "title": "Response - Change Status Code",
+          "url": "https://fastapi.tiangolo.com/advanced/response-change-status-code/"
+        },
+        {
+          "source_number": 4,
+          "title": "Response Cookies",
+          "url": "https://fastapi.tiangolo.com/advanced/response-cookies/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/response-headers/",
+        "https://fastapi.tiangolo.com/tutorial/response-model/",
+        "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
+        "https://fastapi.tiangolo.com/advanced/response-cookies/",
+        "https://fastapi.tiangolo.com/tutorial/response-model/"
+      ],
+      "retrieval_time_ms": 13.26,
+      "generation_time_ms": 3667.1,
+      "total_time_ms": 3680.37,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported by the response-model documentation. Covers response structure, validation/filtering, and exclusion of extra fields."
+      }
+    },
+    {
+      "id": "Q07",
+      "question": "How can I receive multiple values in a FastAPI request body?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Multiple body parameters can be declared",
+        "Body can be used to explicitly declare request-body values",
+        "Pydantic models and individual body values can be combined"
+      ],
+      "answer": "You can declare multiple body parameters in your path operation. Although the request has only one body, FastAPI handles the parameters, passes the corresponding values to your function, and validates and documents the schema. [Source 1]\n\nYou can also declare singular values as body parameters, or tell FastAPI to embed a body value under a key—even when there’s only one body parameter. [Source 1] The supplied documentation doesn’t include the exact syntax for these options.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Body - Multiple Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/"
+        },
+        {
+          "source_number": 2,
+          "title": "Query Parameters and String Validations",
+          "url": "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/"
+        },
+        {
+          "source_number": 3,
+          "title": "Request Body",
+          "url": "https://fastapi.tiangolo.com/tutorial/body/"
+        },
+        {
+          "source_number": 4,
+          "title": "Header Parameters",
+          "url": "https://fastapi.tiangolo.com/tutorial/header-params/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
+        "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
+        "https://fastapi.tiangolo.com/tutorial/body/",
+        "https://fastapi.tiangolo.com/tutorial/header-params/"
+      ],
+      "retrieval_time_ms": 10.77,
+      "generation_time_ms": 3773.85,
+      "total_time_ms": 3784.62,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Explains multiple body parameters and singular body values, but does not clearly show Body usage or combining Pydantic models with individual body fields."
+      }
+    },
+    {
+      "id": "Q08",
+      "question": "How do I run code when a FastAPI application starts or shuts down?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Application startup and shutdown behavior can be managed",
+        "Lifespan functionality can be used for application lifecycle logic",
+        "Resources can be initialized and cleaned up around application execution"
+      ],
+      "answer": "Use the **lifespan** mechanism on your `FastAPI` app for startup and shutdown logic. Startup code runs once before the app accepts requests; shutdown code runs once after it finishes handling requests. This is useful for setting up and cleaning up shared resources, such as a database connection pool or a machine-learning model. [Source 1]\n\nThe supplied documentation recommends lifespan, but doesn’t include its implementation example. It also describes event handlers as an **alternative, deprecated** approach: startup handlers use `@app.on_event(\"startup\")`, and handlers may be `async def` or regular `def`. If you provide a lifespan parameter, startup and shutdown event handlers will no longer be called—use one approach, not both. [Source 1]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Lifespan Events",
+          "url": "https://fastapi.tiangolo.com/advanced/events/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI CLI",
+          "url": "https://fastapi.tiangolo.com/fastapi-cli/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 4,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/events/",
+        "https://fastapi.tiangolo.com/advanced/events/",
+        "https://fastapi.tiangolo.com/fastapi-cli/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/"
+      ],
+      "retrieval_time_ms": 8.77,
+      "generation_time_ms": 5764.75,
+      "total_time_ms": 5773.52,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and well supported; clearly explains lifespan startup/shutdown behavior and resource setup/cleanup."
+      }
+    },
+    {
+      "id": "Q09",
+      "question": "How can I return a custom HTTP status code in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Different HTTP status codes can be returned when required",
+        "A Response or JSONResponse can be returned directly",
+        "The response can specify its own status code"
+      ],
+      "answer": "For a status code that is always the same, set `status_code` on the path-operation decorator:\n\n```python\nfrom fastapi import FastAPI, status\n\napp = FastAPI()\n\n@app.post(\"/items/\", status_code=status.HTTP_201_CREATED)\nasync def create_item():\n    return {\"created\": True}\n```\n\nYou can pass an integer directly or use a named constant from `fastapi.status`. FastAPI returns that code and includes it in the OpenAPI schema. [Source 1] [Source 3]\n\nIf the code depends on the request or result, accept a `Response` parameter and set its `status_code` inside the function. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Response Status Code",
+          "url": "https://fastapi.tiangolo.com/tutorial/response-status-code/"
+        },
+        {
+          "source_number": 2,
+          "title": "Response - Change Status Code",
+          "url": "https://fastapi.tiangolo.com/advanced/response-change-status-code/"
+        },
+        {
+          "source_number": 3,
+          "title": "Path Operation Configuration",
+          "url": "https://fastapi.tiangolo.com/tutorial/path-operation-configuration/"
+        },
+        {
+          "source_number": 4,
+          "title": "Status Codes",
+          "url": "https://fastapi.tiangolo.com/reference/status/"
+        },
+        {
+          "source_number": 5,
+          "title": "Use Old 403 Authentication Error Status Codes",
+          "url": "https://fastapi.tiangolo.com/how-to/authentication-error-status-code/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/response-status-code/",
+        "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
+        "https://fastapi.tiangolo.com/tutorial/path-operation-configuration/",
+        "https://fastapi.tiangolo.com/reference/status/",
+        "https://fastapi.tiangolo.com/how-to/authentication-error-status-code/"
+      ],
+      "retrieval_time_ms": 8.5,
+      "generation_time_ms": 3729.78,
+      "total_time_ms": 3738.28,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Explains decorator status codes and changing Response.status_code, but does not explicitly cover returning Response or JSONResponse directly."
+      }
+    },
+    {
+      "id": "Q10",
+      "question": "How do I deploy a FastAPI application using Docker?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "A Docker image can contain the FastAPI application",
+        "Dependencies and application files are copied into the image",
+        "The application server is started inside the container"
+      ],
+      "answer": "The provided documentation recommends building a Docker image from the official Python image. This is suitable for running the app in a container platform such as Kubernetes or a cloud service. [Source 1]\n\nFor Kubernetes, the documentation says you’ll probably want one Uvicorn process per container rather than multiple workers. [Source 2]\n\nThe supplied excerpts don’t include the Dockerfile, build command, or run command, so they aren’t enough to give step-by-step deployment instructions.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 2,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 3,
+          "title": "Deployment",
+          "url": "https://fastapi.tiangolo.com/deployment/"
+        },
+        {
+          "source_number": 4,
+          "title": "FastAPI Cloud",
+          "url": "https://fastapi.tiangolo.com/deployment/fastapicloud/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/",
+        "https://fastapi.tiangolo.com/deployment/fastapicloud/"
+      ],
+      "retrieval_time_ms": 6.74,
+      "generation_time_ms": 3166.62,
+      "total_time_ms": 3173.36,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Partly correct and well supported, but missing key Docker deployment steps such as copying dependencies/application files and explicitly starting the application server inside the container."
+      }
+    },
+    {
+      "id": "Q11",
+      "question": "How do I upload files to a FastAPI endpoint?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Files can be received using File",
+        "UploadFile can be used for uploaded files",
+        "Uploaded files are sent as form data"
+      ],
+      "answer": "The supplied documentation excerpt is incomplete, so it doesn’t provide enough detail to show a working endpoint or explain the full upload setup.\n\nIt does indicate that FastAPI handles uploads through the **Request Files** feature, including `UploadFile`, and that multiple files can be sent together under the same form field using form data. [Source 3]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 3,
+          "title": "Request Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-files/"
+        },
+        {
+          "source_number": 4,
+          "title": "Generating SDKs",
+          "url": "https://fastapi.tiangolo.com/advanced/generate-clients/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/advanced/generate-clients/"
+      ],
+      "retrieval_time_ms": 7.21,
+      "generation_time_ms": 3777.06,
+      "total_time_ms": 3784.27,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Correctly mentions UploadFile and form-data uploads, but does not clearly explain receiving files with File."
+      }
+    },
+    {
+      "id": "Q12",
+      "question": "How can a FastAPI endpoint receive form data instead of JSON?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Form data can be declared using Form",
+        "Form fields are received differently from JSON request bodies",
+        "Form parameters can be validated by FastAPI"
+      ],
+      "answer": "Use `Form` parameters in your endpoint instead of JSON `Body` parameters. Install `python-multipart` first, then declare the fields with `Form()`:\n\n```python\nfrom typing import Annotated\nfrom fastapi import FastAPI, Form\n\napp = FastAPI()\n\n@app.post(\"/login/\")\nasync def login(\n    username: Annotated[str, Form()],\n    password: Annotated[str, Form()],\n):\n    return {\"username\": username}\n```\n\nFastAPI reads these values from the form body. Form data is typically encoded as `application/x-www-form-urlencoded`; if the form includes files, it uses `multipart/form-data`. You can’t combine form fields with JSON `Body` fields in the same request, because the body uses a different encoding. [Source 2] **[Source 1]**",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Request Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-files/"
+        },
+        {
+          "source_number": 2,
+          "title": "Form Data",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-forms/"
+        },
+        {
+          "source_number": 3,
+          "title": "Request Forms and Files",
+          "url": "https://fastapi.tiangolo.com/tutorial/request-forms-and-files/"
+        },
+        {
+          "source_number": 4,
+          "title": "Testing",
+          "url": "https://fastapi.tiangolo.com/tutorial/testing/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "https://fastapi.tiangolo.com/tutorial/request-forms/",
+        "https://fastapi.tiangolo.com/tutorial/request-forms-and-files/",
+        "https://fastapi.tiangolo.com/tutorial/request-forms/",
+        "https://fastapi.tiangolo.com/tutorial/testing/"
+      ],
+      "retrieval_time_ms": 10.06,
+      "generation_time_ms": 2545.14,
+      "total_time_ms": 2555.19,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Clearly explains Form usage and form encoding, but does not explicitly mention FastAPI validation of form parameters."
+      }
+    },
+    {
+      "id": "Q13",
+      "question": "How do I run a task after returning a response from FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "BackgroundTasks can schedule work after returning a response",
+        "A background task can be added inside a path operation",
+        "Background work can avoid delaying the response for small tasks"
+      ],
+      "answer": "Use FastAPI’s `BackgroundTasks`: its tasks run after the HTTP response span ends, so they don’t increase the measured response time. [Source 1]\n\nThe supplied documentation doesn’t show how to declare or add a background task, so I can’t provide the setup code from these sources.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "OpenTelemetry",
+          "url": "https://fastapi.tiangolo.com/advanced/opentelemetry/"
+        },
+        {
+          "source_number": 2,
+          "title": "Middleware",
+          "url": "https://fastapi.tiangolo.com/tutorial/middleware/"
+        },
+        {
+          "source_number": 3,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 4,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 5,
+          "title": "Concurrency and async / await",
+          "url": "https://fastapi.tiangolo.com/async/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/opentelemetry/",
+        "https://fastapi.tiangolo.com/tutorial/middleware/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/async/"
+      ],
+      "retrieval_time_ms": 8.74,
+      "generation_time_ms": 3469.25,
+      "total_time_ms": 3477.99,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Explains that background tasks run after the response and avoid delaying it, but does not show how to declare BackgroundTasks or add a task inside the path operation."
+      }
+    },
+    {
+      "id": "Q14",
+      "question": "How do I allow requests from another frontend domain using CORS in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "CORSMiddleware can configure cross-origin requests",
+        "Allowed origins can be specified",
+        "Methods, headers and credentials can be configured"
+      ],
+      "answer": "Add FastAPI’s `CORSMiddleware` and list the frontend’s exact origin (scheme, host, and port, if any) in `allow_origins`. CORS options are restrictive by default, so explicitly allow the origins, methods, and headers your frontend needs. [Source 2]\n\n```python\nfrom fastapi import FastAPI\nfrom fastapi.middleware.cors import CORSMiddleware\n\napp = FastAPI()\n\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"https://frontend.example.com\"],\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n```\n\nIf your frontend sends requests that require credentials, the documentation’s example enables that with `allow_credentials=True`. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Security - First Steps",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/first-steps/"
+        },
+        {
+          "source_number": 2,
+          "title": "CORS (Cross-Origin Resource Sharing)",
+          "url": "https://fastapi.tiangolo.com/tutorial/cors/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 4,
+          "title": "Using Dataclasses",
+          "url": "https://fastapi.tiangolo.com/advanced/dataclasses/"
+        },
+        {
+          "source_number": 5,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
+        "https://fastapi.tiangolo.com/tutorial/cors/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/advanced/dataclasses/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/"
+      ],
+      "retrieval_time_ms": 10.59,
+      "generation_time_ms": 2642.74,
+      "total_time_ms": 2653.34,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported by the CORS documentation; clearly explains origins, methods, headers, and credentials."
+      }
+    },
+    {
+      "id": "Q15",
+      "question": "How do I add middleware to a FastAPI application?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Middleware can run logic before and after a request",
+        "Middleware receives the request and calls the next handler",
+        "Middleware can modify or inspect requests and responses"
+      ],
+      "answer": "FastAPI provides a `middleware` method on the application to add middleware; the supplied documentation identifies its argument as a middleware type, but doesn’t include the complete call syntax. [Source 3]\n\nMiddleware can run code on each request before it reaches a path operation and on each response before it is returned. [Source 2]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Advanced Middleware",
+          "url": "https://fastapi.tiangolo.com/advanced/middleware/"
+        },
+        {
+          "source_number": 2,
+          "title": "Middleware",
+          "url": "https://fastapi.tiangolo.com/tutorial/middleware/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 4,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 5,
+          "title": "Deployment",
+          "url": "https://fastapi.tiangolo.com/deployment/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/middleware/",
+        "https://fastapi.tiangolo.com/tutorial/middleware/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/"
+      ],
+      "retrieval_time_ms": 7.26,
+      "generation_time_ms": 4089.62,
+      "total_time_ms": 4096.89,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and fully supported. Explains before/after middleware behavior, but does not clearly describe calling the next handler or explicitly discuss inspecting/modifying requests and responses."
+      }
+    },
+    {
+      "id": "Q16",
+      "question": "How can FastAPI serve static files such as CSS or images?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "StaticFiles can be mounted on the FastAPI application",
+        "A directory can contain static content",
+        "Static content can be exposed under a URL path"
+      ],
+      "answer": "Use FastAPI’s `StaticFiles` class to serve files such as CSS and images. It can be imported with:\n\n```python\nfrom fastapi.staticfiles import StaticFiles\n```\n\n[Source 1]\n\nThe provided documentation excerpt doesn’t include the setup code for attaching `StaticFiles` to an application. For a built frontend directory, FastAPI also documents a `frontend` option that serves its files as low-priority routes, after normal path operations are checked. [Source 3]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Static Files - StaticFiles",
+          "url": "https://fastapi.tiangolo.com/reference/staticfiles/"
+        },
+        {
+          "source_number": 2,
+          "title": "Custom Docs UI Static Assets (Self-Hosting)",
+          "url": "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/"
+        },
+        {
+          "source_number": 3,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        },
+        {
+          "source_number": 4,
+          "title": "APIRouter class",
+          "url": "https://fastapi.tiangolo.com/reference/apirouter/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/reference/staticfiles/",
+        "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+        "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+        "https://fastapi.tiangolo.com/reference/fastapi/",
+        "https://fastapi.tiangolo.com/reference/apirouter/"
+      ],
+      "retrieval_time_ms": 11.29,
+      "generation_time_ms": 4589.62,
+      "total_time_ms": 4600.91,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Partly correct and well supported, but it does not explain how to mount StaticFiles with a directory or expose that directory under a URL path."
+      }
+    },
+    {
+      "id": "Q17",
+      "question": "How do I create a WebSocket endpoint in FastAPI?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "FastAPI supports WebSocket routes",
+        "The WebSocket connection must be accepted",
+        "Messages can be sent and received over the connection"
+      ],
+      "answer": "Import `WebSocket`, decorate an async function with `@app.websocket(\"/ws\")`, accept the connection, then receive and send messages:\n\n```python\nfrom fastapi import FastAPI, WebSocket\n\napp = FastAPI()\n\n@app.websocket(\"/ws\")\nasync def websocket_endpoint(websocket: WebSocket):\n    await websocket.accept()\n    while True:\n        data = await websocket.receive_text()\n        await websocket.send_text(f\"Message text was: {data}\")\n```\n\nThe `websocket` decorator registers a WebSocket endpoint, and the example accepts the connection before exchanging text messages. [Source 3] [Source 5]",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "OpenTelemetry",
+          "url": "https://fastapi.tiangolo.com/advanced/opentelemetry/"
+        },
+        {
+          "source_number": 2,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 3,
+          "title": "WebSockets",
+          "url": "https://fastapi.tiangolo.com/advanced/websockets/"
+        },
+        {
+          "source_number": 4,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 5,
+          "title": "FastAPI class",
+          "url": "https://fastapi.tiangolo.com/reference/fastapi/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/advanced/opentelemetry/",
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/advanced/websockets/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/reference/fastapi/"
+      ],
+      "retrieval_time_ms": 9.82,
+      "generation_time_ms": 3603.71,
+      "total_time_ms": 3613.53,
+      "manual_evaluation": {
+        "correctness_score": 3,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Fully correct and directly supported by the retrieved WebSockets documentation."
+      }
+    },
+    {
+      "id": "Q18",
+      "question": "How do I test a FastAPI application?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "FastAPI applications can be tested using TestClient",
+        "Tests can send requests to application routes",
+        "Responses and status codes can be asserted"
+      ],
+      "answer": "The documentation says to use FastAPI’s provided `TestClient` for synchronous tests. If your tests need to be asynchronous—for example, to query an async database—you can write async tests instead. [Source 3]\n\nThe supplied documentation excerpt doesn’t include the setup or code examples for either approach, so I can’t give the exact steps from this context.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Server Workers - Uvicorn with Workers",
+          "url": "https://fastapi.tiangolo.com/deployment/server-workers/"
+        },
+        {
+          "source_number": 2,
+          "title": "FastAPI in Containers - Docker",
+          "url": "https://fastapi.tiangolo.com/deployment/docker/"
+        },
+        {
+          "source_number": 3,
+          "title": "Async Tests",
+          "url": "https://fastapi.tiangolo.com/advanced/async-tests/"
+        },
+        {
+          "source_number": 4,
+          "title": "Deployment",
+          "url": "https://fastapi.tiangolo.com/deployment/"
+        },
+        {
+          "source_number": 5,
+          "title": "Generating SDKs",
+          "url": "https://fastapi.tiangolo.com/advanced/generate-clients/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/deployment/server-workers/",
+        "https://fastapi.tiangolo.com/deployment/docker/",
+        "https://fastapi.tiangolo.com/advanced/async-tests/",
+        "https://fastapi.tiangolo.com/deployment/",
+        "https://fastapi.tiangolo.com/advanced/generate-clients/"
+      ],
+      "retrieval_time_ms": 6.33,
+      "generation_time_ms": 3125.02,
+      "total_time_ms": 3131.35,
+      "manual_evaluation": {
+        "correctness_score": 1,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Partly correct and fully supported. Identifies TestClient, but does not explain how to send requests or assert response content and status codes."
+      }
+    },
+    {
+      "id": "Q19",
+      "question": "How can I add metadata such as a title and description to my FastAPI application?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "Application metadata can be configured when creating FastAPI",
+        "Metadata can include a title and description",
+        "Metadata is used in generated API documentation"
+      ],
+      "answer": "The supplied documentation doesn’t explain how to add a title or description to the FastAPI application itself. It only mentions `title` and `description` as metadata you can declare for parameters [Source 1].",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "Query Parameters and String Validations",
+          "url": "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/"
+        },
+        {
+          "source_number": 2,
+          "title": "Testing",
+          "url": "https://fastapi.tiangolo.com/tutorial/testing/"
+        },
+        {
+          "source_number": 3,
+          "title": "OpenTelemetry",
+          "url": "https://fastapi.tiangolo.com/advanced/opentelemetry/"
+        },
+        {
+          "source_number": 4,
+          "title": "FastAPI",
+          "url": "https://fastapi.tiangolo.com/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
+        "https://fastapi.tiangolo.com/tutorial/testing/",
+        "https://fastapi.tiangolo.com/advanced/opentelemetry/",
+        "https://fastapi.tiangolo.com/",
+        "https://fastapi.tiangolo.com/tutorial/testing/"
+      ],
+      "retrieval_time_ms": 11.56,
+      "generation_time_ms": 2447.13,
+      "total_time_ms": 2458.69,
+      "manual_evaluation": {
+        "correctness_score": 0,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Retrieval missed the application metadata documentation, so the answer cannot explain FastAPI title/description configuration. The response remains source-grounded."
+      }
+    },
+    {
+      "id": "Q20",
+      "question": "How do I secure a FastAPI API using OAuth2 with JWT tokens?",
+      "retrieval_method": "bm25",
+      "key_points": [
+        "OAuth2 can be used for authentication",
+        "JWT tokens can represent authenticated users",
+        "Tokens are created and validated as part of the authentication flow"
+      ],
+      "answer": "The supplied documentation gives the high-level approach, but not enough detail for a complete implementation:\n\n- Start with an OAuth2 username-and-password flow using bearer tokens. The simpler flow provides the building blocks, but is not secure by itself. [Source 2]\n- Add secure password hashing and use JWTs; FastAPI’s tutorial describes this as the step that makes the application secure. [Source 1]\n- Install PyJWT to generate and verify JWTs. If using RSA or ECDSA signatures, install `pyjwt[crypto]`. [Source 1]\n- You can use OAuth2 scopes to restrict the permissions associated with a token. [Source 1]\n\nThe provided excerpts don’t include the code or specific steps for hashing passwords, creating or validating JWTs, or protecting endpoints, so I can’t give a reliable implementation from this context alone.",
+      "sources": [
+        {
+          "source_number": 1,
+          "title": "OAuth2 with Password (and hashing), Bearer with JWT tokens",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/"
+        },
+        {
+          "source_number": 2,
+          "title": "Simple OAuth2 with Password and Bearer",
+          "url": "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/"
+        }
+      ],
+      "retrieved_urls": [
+        "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/",
+        "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/"
+      ],
+      "retrieval_time_ms": 10.37,
+      "generation_time_ms": 3872.09,
+      "total_time_ms": 3882.46,
+      "manual_evaluation": {
+        "correctness_score": 2,
+        "source_support_score": 3,
+        "unsupported_claims": 0,
+        "notes": "Mostly correct and well supported. Covers OAuth2 and JWT generation/verification, but does not clearly explain how the JWT represents and authenticates the user."
+      }
+    }
+  ]
+}
