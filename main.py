@@ -21,6 +21,8 @@ from semantic_search import MODEL_NAME, load_data
 from chat_routes import router as chat_router
 from auth import get_logged_in_user
 
+from feedback_routes import router as feedback_router
+
 from chat_service import (
     save_compare_chat,
     save_rag_chat,
@@ -98,6 +100,7 @@ app.mount(
 
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(feedback_router)
 
 
 # ============================================================
@@ -4041,14 +4044,13 @@ def document(
 
 
         <script>
-            {JS}
-        </script>
+    {JS}
+</script>
 
-        <script
-            src="/static/js/app.js"
-        ></script>
+<script src="/static/js/app.js"></script>
+<script src="/static/js/feedback.js"></script>
 
-    </body>
+</body>
 
     </html>
     """
