@@ -4007,7 +4007,11 @@ def document(
         <style>
             {CSS}
         </style>
-
+        
+        <link
+    rel="stylesheet"
+    href="/static/css/history.css"
+        >
     </head>
 
 
@@ -4745,6 +4749,9 @@ async def ask_question(
     retrieval_method: str = Form(
         "semantic"
     ),
+    chat_id: int | None = Form(
+        None
+    ),
 ):
 
     question = question.strip()
@@ -4809,14 +4816,15 @@ async def ask_question(
 
                 try:
 
-                    save_compare_chat(
-                        user_id=user["id"],
-                        question=question,
-                        semantic_result=
-                            semantic_result,
-                        bm25_result=
-                            bm25_result,
-                    )
+                   save_compare_chat(
+    user_id=user["id"],
+    question=question,
+    semantic_result=
+        semantic_result,
+    bm25_result=
+        bm25_result,
+    chat_id=chat_id,
+)
 
                 except Exception as save_error:
 
@@ -4854,11 +4862,12 @@ async def ask_question(
 
             try:
 
-                save_rag_chat(
-                    user_id=user["id"],
-                    question=question,
-                    result=result,
-                )
+               save_rag_chat(
+    user_id=user["id"],
+    question=question,
+    result=result,
+    chat_id=chat_id,
+)
 
             except Exception as save_error:
 
