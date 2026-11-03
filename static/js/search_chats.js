@@ -19,7 +19,7 @@
 
 
     /* ========================================================
-       FILTER DATABASE CHAT ROWS
+       FILTER DATABASE CHATS
     ======================================================== */
 
     function filterChats() {
@@ -85,12 +85,12 @@
 
 
                 row.style.setProperty(
-    "display",
-    matches
-        ? "flex"
-        : "none",
-    "important"
-);
+                    "display",
+                    matches
+                        ? "flex"
+                        : "none",
+                    "important"
+                );
 
 
                 if (matches) {
@@ -143,10 +143,10 @@
 
 
     /* ========================================================
-       REMOVE OLD LOCALSTORAGE SEARCH LISTENER
+       REPLACE OLD LOCALSTORAGE SEARCH INPUT
     ======================================================== */
 
-    function replaceSearchInput() {
+    function initialiseChatSearch() {
 
         const oldInput =
             document.getElementById(
@@ -159,12 +159,6 @@
         }
 
 
-        /*
-         * Cloning the input removes the old JavaScript
-         * event listener that searched localStorage.
-         *
-         * The ID, classes, placeholder and styling remain.
-         */
         const newInput =
             oldInput.cloneNode(
                 true
@@ -206,93 +200,6 @@
                 }
             }
         );
-    }
-
-
-    /* ========================================================
-       WATCH DATABASE HISTORY RELOADS
-
-       Pin, rename and delete can rebuild the Recents list.
-       When that happens, keep the current search applied.
-    ======================================================== */
-
-    function watchHistory() {
-
-        const container =
-            document.getElementById(
-                HISTORY_CONTAINER_ID
-            );
-
-
-        if (!container) {
-            return;
-        }
-
-
-        const observer =
-            new MutationObserver(
-                mutations => {
-
-                    const importantChange =
-                        mutations.some(
-                            mutation => {
-
-                                return Array.from(
-                                    mutation.addedNodes
-                                )
-                                .some(
-                                    node => {
-
-                                        return (
-                                            node.nodeType === 1
-                                            &&
-                                            (
-                                                node.classList
-                                                    ?.contains(
-                                                        "history-row"
-                                                    )
-                                                ||
-                                                node.querySelector
-                                                    ?.(
-                                                        ".history-row"
-                                                    )
-                                            )
-                                        );
-                                    }
-                                );
-                            }
-                        );
-
-
-                    if (importantChange) {
-
-                        filterChats();
-                    }
-                }
-            );
-
-
-        observer.observe(
-            container,
-            {
-                childList:
-                    true
-            }
-        );
-    }
-
-
-    /* ========================================================
-       START
-    ======================================================== */
-
-    function initialiseChatSearch() {
-
-        replaceSearchInput();
-
-        watchHistory();
-
-        filterChats();
     }
 
 
