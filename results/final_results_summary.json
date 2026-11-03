@@ -1,0 +1,39 @@
+{
+  "evaluation_stage": "20-question candidate evaluation",
+  "retrieval_results": {
+    "semantic": {
+      "questions": 20,
+      "hit_at_1": 0.65,
+      "hit_at_3": 0.95,
+      "hit_at_5": 0.95,
+      "mean_reciprocal_rank": 0.783,
+      "average_response_time_ms": 7.89
+    },
+    "bm25": {
+      "questions": 20,
+      "hit_at_1": 0.4,
+      "hit_at_3": 0.75,
+      "hit_at_5": 0.8,
+      "mean_reciprocal_rank": 0.552,
+      "average_response_time_ms": 9.8
+    }
+  },
+  "answer_quality_results": {
+    "semantic": {
+      "answers_reviewed": 20,
+      "average_correctness_score": 2.15,
+      "correctness_percentage": 71.7,
+      "average_source_support_score": 3.0,
+      "total_unsupported_claims": 0,
+      "average_total_response_time_ms": 4139.85
+    },
+    "bm25": {
+      "answers_reviewed": 20,
+      "average_correctness_score": 1.85,
+      "correctness_percentage": 61.7,
+      "average_source_support_score": 3.0,
+      "total_unsupported_claims": 0,
+      "average_total_response_time_ms": 3575.12
+    }
+  }
+}
