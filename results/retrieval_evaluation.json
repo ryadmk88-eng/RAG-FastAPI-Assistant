@@ -1,29 +1,32 @@
 {
-  "configuration": {
-    "questions": 10,
+  "settings": {
+    "questions": 20,
     "top_k": 5,
-    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "semantic_model": "sentence-transformers/all-MiniLM-L6-v2",
     "corpus_chunks": 4012
   },
   "semantic": {
     "summary": {
-      "questions": 10,
-      "hit_at_1": 0.7,
-      "hit_at_3": 1.0,
-      "hit_at_5": 1.0,
-      "mean_reciprocal_rank": 0.833,
-      "average_response_time_ms": 8.91
+      "questions": 20,
+      "hit_at_1": 0.65,
+      "hit_at_3": 0.95,
+      "hit_at_5": 0.95,
+      "mean_reciprocal_rank": 0.783,
+      "average_response_time_ms": 7.89
     },
     "questions": [
       {
         "id": "Q01",
         "question": "How do I handle request validation errors in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/handling-errors"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/handling-errors/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 18.1,
+        "response_time_ms": 21.04,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/handling-errors/",
           "https://fastapi.tiangolo.com/tutorial/handling-errors/",
@@ -35,12 +38,15 @@
       {
         "id": "Q02",
         "question": "How do I send JSON data in the body of a FastAPI request?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/body/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/body"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/body/",
         "expected_rank": 3,
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 9.39,
+        "response_time_ms": 8.02,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/",
           "https://fastapi.tiangolo.com/tutorial/request-files/",
@@ -52,12 +58,15 @@
       {
         "id": "Q03",
         "question": "How do I create a path parameter in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/path-params/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/path-params"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/path-params/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.61,
+        "response_time_ms": 7.73,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/path-params/",
           "https://fastapi.tiangolo.com/reference/parameters/",
@@ -69,12 +78,15 @@
       {
         "id": "Q04",
         "question": "How do query parameters work in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/query-params/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/query-params"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/query-params/",
         "expected_rank": 2,
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.8,
+        "response_time_ms": 5.92,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/reference/parameters/",
           "https://fastapi.tiangolo.com/tutorial/query-params/",
@@ -86,12 +98,15 @@
       {
         "id": "Q05",
         "question": "How can I use dependency injection in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/dependencies"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/dependencies/",
         "expected_rank": 2,
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.55,
+        "response_time_ms": 6.88,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/features/",
           "https://fastapi.tiangolo.com/tutorial/dependencies/",
@@ -103,12 +118,15 @@
       {
         "id": "Q06",
         "question": "How do I use a response model in FastAPI to control and filter the data returned by an endpoint?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/response-model/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/response-model"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/response-model/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.5,
+        "response_time_ms": 6.88,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/response-model/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -120,12 +138,15 @@
       {
         "id": "Q07",
         "question": "How can I receive multiple values in a FastAPI request body?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/body-multiple-params"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.48,
+        "response_time_ms": 6.18,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
           "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
@@ -137,12 +158,15 @@
       {
         "id": "Q08",
         "question": "How do I run code when a FastAPI application starts or shuts down?",
-        "expected_url": "https://fastapi.tiangolo.com/advanced/events/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/advanced/events"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/events/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 9.17,
+        "response_time_ms": 8.64,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/events/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -154,12 +178,16 @@
       {
         "id": "Q09",
         "question": "How can I return a custom HTTP status code in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/advanced/additional-status-codes",
+          "https://fastapi.tiangolo.com/tutorial/response-status-code"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.78,
+        "response_time_ms": 7.71,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
           "https://fastapi.tiangolo.com/reference/status/",
@@ -171,12 +199,15 @@
       {
         "id": "Q10",
         "question": "How do I deploy a FastAPI application using Docker?",
-        "expected_url": "https://fastapi.tiangolo.com/deployment/docker/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/deployment/docker"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/deployment/docker/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.76,
+        "response_time_ms": 7.79,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/docker/",
           "https://fastapi.tiangolo.com/deployment/docker/",
@@ -184,28 +215,235 @@
           "https://fastapi.tiangolo.com/deployment/docker/",
           "https://fastapi.tiangolo.com/deployment/docker/"
         ]
+      },
+      {
+        "id": "Q11",
+        "question": "How do I upload files to a FastAPI endpoint?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/request-files"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "expected_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 7.03,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/reference/uploadfile/",
+          "https://fastapi.tiangolo.com/tutorial/request-files/",
+          "https://fastapi.tiangolo.com/reference/uploadfile/",
+          "https://fastapi.tiangolo.com/tutorial/request-files/",
+          "https://fastapi.tiangolo.com/tutorial/request-files/"
+        ]
+      },
+      {
+        "id": "Q12",
+        "question": "How can a FastAPI endpoint receive form data instead of JSON?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/request-forms"
+        ],
+        "matched_url": null,
+        "expected_rank": null,
+        "hit_at_1": false,
+        "hit_at_3": false,
+        "hit_at_5": false,
+        "response_time_ms": 7.98,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/request-files/",
+          "https://fastapi.tiangolo.com/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/reference/fastapi/"
+        ]
+      },
+      {
+        "id": "Q13",
+        "question": "How do I run a task after returning a response from FastAPI?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/background-tasks",
+          "https://fastapi.tiangolo.com/reference/background"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/reference/background/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 7.62,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/reference/background/",
+          "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
+          "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
+          "https://fastapi.tiangolo.com/reference/background/",
+          "https://fastapi.tiangolo.com/advanced/additional-status-codes/"
+        ]
+      },
+      {
+        "id": "Q14",
+        "question": "How do I allow requests from another frontend domain using CORS in FastAPI?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/cors"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/cors/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 7.78,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/cors/",
+          "https://fastapi.tiangolo.com/tutorial/cors/",
+          "https://fastapi.tiangolo.com/tutorial/cors/",
+          "https://fastapi.tiangolo.com/tutorial/cors/",
+          "https://fastapi.tiangolo.com/tutorial/cors/"
+        ]
+      },
+      {
+        "id": "Q15",
+        "question": "How do I add middleware to a FastAPI application?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/middleware",
+          "https://fastapi.tiangolo.com/advanced/middleware",
+          "https://fastapi.tiangolo.com/reference/middleware"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/middleware/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 6.21,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/advanced/middleware/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/advanced/middleware/",
+          "https://fastapi.tiangolo.com/reference/middleware/",
+          "https://fastapi.tiangolo.com/advanced/middleware/"
+        ]
+      },
+      {
+        "id": "Q16",
+        "question": "How can FastAPI serve static files such as CSS or images?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/static-files",
+          "https://fastapi.tiangolo.com/reference/staticfiles"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/reference/staticfiles/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 7.23,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/reference/staticfiles/",
+          "https://fastapi.tiangolo.com/tutorial/static-files/",
+          "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+          "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+          "https://fastapi.tiangolo.com/tutorial/static-files/"
+        ]
+      },
+      {
+        "id": "Q17",
+        "question": "How do I create a WebSocket endpoint in FastAPI?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/advanced/websockets"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/websockets/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 6.7,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/advanced/websockets/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/reference/apirouter/"
+        ]
+      },
+      {
+        "id": "Q18",
+        "question": "How do I test a FastAPI application?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/testing"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/testing/",
+        "expected_rank": 3,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 7.0,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/deployment/versions/",
+          "https://fastapi.tiangolo.com/reference/testclient/",
+          "https://fastapi.tiangolo.com/tutorial/testing/",
+          "https://fastapi.tiangolo.com/deployment/versions/",
+          "https://fastapi.tiangolo.com/advanced/async-tests/"
+        ]
+      },
+      {
+        "id": "Q19",
+        "question": "How can I add metadata such as a title and description to my FastAPI application?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/metadata"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/metadata/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 6.68,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/metadata/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/tutorial/metadata/",
+          "https://fastapi.tiangolo.com/tutorial/path-operation-configuration/",
+          "https://fastapi.tiangolo.com/reference/fastapi/"
+        ]
+      },
+      {
+        "id": "Q20",
+        "question": "How do I secure a FastAPI API using OAuth2 with JWT tokens?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "expected_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 6.8,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+          "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/",
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+          "https://fastapi.tiangolo.com/tutorial/security/first-steps/"
+        ]
       }
     ]
   },
   "bm25": {
     "summary": {
-      "questions": 10,
+      "questions": 20,
       "hit_at_1": 0.4,
-      "hit_at_3": 0.7,
+      "hit_at_3": 0.75,
       "hit_at_5": 0.8,
-      "mean_reciprocal_rank": 0.537,
-      "average_response_time_ms": 11.98
+      "mean_reciprocal_rank": 0.552,
+      "average_response_time_ms": 9.8
     },
     "questions": [
       {
         "id": "Q01",
         "question": "How do I handle request validation errors in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/handling-errors"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/handling-errors/",
         "expected_rank": 3,
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 12.51,
+        "response_time_ms": 10.8,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/how-to/custom-request-and-route/",
           "https://fastapi.tiangolo.com/deployment/server-workers/",
@@ -217,12 +455,15 @@
       {
         "id": "Q02",
         "question": "How do I send JSON data in the body of a FastAPI request?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/body/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/body"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/body/",
         "expected_rank": 3,
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 17.46,
+        "response_time_ms": 10.54,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/testing/",
           "https://fastapi.tiangolo.com/reference/apirouter/",
@@ -234,12 +475,15 @@
       {
         "id": "Q03",
         "question": "How do I create a path parameter in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/path-params/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/path-params"
+        ],
+        "matched_url": null,
         "expected_rank": null,
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": false,
-        "response_time_ms": 10.98,
+        "response_time_ms": 7.69,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/server-workers/",
           "https://fastapi.tiangolo.com/deployment/docker/",
@@ -251,12 +495,15 @@
       {
         "id": "Q04",
         "question": "How do query parameters work in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/query-params/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/query-params"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/query-params/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.73,
+        "response_time_ms": 5.07,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/query-params/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -268,12 +515,15 @@
       {
         "id": "Q05",
         "question": "How can I use dependency injection in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/dependencies"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/dependencies/",
         "expected_rank": 5,
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": true,
-        "response_time_ms": 8.36,
+        "response_time_ms": 8.06,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/background-tasks/",
           "https://fastapi.tiangolo.com/alternatives/",
@@ -285,12 +535,15 @@
       {
         "id": "Q06",
         "question": "How do I use a response model in FastAPI to control and filter the data returned by an endpoint?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/response-model/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/response-model"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/response-model/",
         "expected_rank": 2,
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 17.71,
+        "response_time_ms": 14.3,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/response-headers/",
           "https://fastapi.tiangolo.com/tutorial/response-model/",
@@ -302,12 +555,15 @@
       {
         "id": "Q07",
         "question": "How can I receive multiple values in a FastAPI request body?",
-        "expected_url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/body-multiple-params"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 11.34,
+        "response_time_ms": 8.24,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
           "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
@@ -319,12 +575,15 @@
       {
         "id": "Q08",
         "question": "How do I run code when a FastAPI application starts or shuts down?",
-        "expected_url": "https://fastapi.tiangolo.com/advanced/events/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/advanced/events"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/events/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 14.15,
+        "response_time_ms": 11.15,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/events/",
           "https://fastapi.tiangolo.com/advanced/events/",
@@ -336,12 +595,16 @@
       {
         "id": "Q09",
         "question": "How can I return a custom HTTP status code in FastAPI?",
-        "expected_url": "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
-        "expected_rank": null,
-        "hit_at_1": false,
-        "hit_at_3": false,
-        "hit_at_5": false,
-        "response_time_ms": 11.96,
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/advanced/additional-status-codes",
+          "https://fastapi.tiangolo.com/tutorial/response-status-code"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/response-status-code/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 10.8,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/response-status-code/",
           "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
@@ -353,18 +616,225 @@
       {
         "id": "Q10",
         "question": "How do I deploy a FastAPI application using Docker?",
-        "expected_url": "https://fastapi.tiangolo.com/deployment/docker/",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/deployment/docker"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/deployment/docker/",
         "expected_rank": 1,
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.64,
+        "response_time_ms": 8.73,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/docker/",
           "https://fastapi.tiangolo.com/deployment/server-workers/",
           "https://fastapi.tiangolo.com/deployment/server-workers/",
           "https://fastapi.tiangolo.com/deployment/",
           "https://fastapi.tiangolo.com/deployment/fastapicloud/"
+        ]
+      },
+      {
+        "id": "Q11",
+        "question": "How do I upload files to a FastAPI endpoint?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/request-files"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "expected_rank": 3,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 8.79,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/deployment/server-workers/",
+          "https://fastapi.tiangolo.com/deployment/docker/",
+          "https://fastapi.tiangolo.com/tutorial/request-files/",
+          "https://fastapi.tiangolo.com/tutorial/request-files/",
+          "https://fastapi.tiangolo.com/advanced/generate-clients/"
+        ]
+      },
+      {
+        "id": "Q12",
+        "question": "How can a FastAPI endpoint receive form data instead of JSON?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/request-forms"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/request-forms/",
+        "expected_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 12.23,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/request-files/",
+          "https://fastapi.tiangolo.com/tutorial/request-forms/",
+          "https://fastapi.tiangolo.com/tutorial/request-forms-and-files/",
+          "https://fastapi.tiangolo.com/tutorial/request-forms/",
+          "https://fastapi.tiangolo.com/tutorial/testing/"
+        ]
+      },
+      {
+        "id": "Q13",
+        "question": "How do I run a task after returning a response from FastAPI?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/background-tasks",
+          "https://fastapi.tiangolo.com/reference/background"
+        ],
+        "matched_url": null,
+        "expected_rank": null,
+        "hit_at_1": false,
+        "hit_at_3": false,
+        "hit_at_5": false,
+        "response_time_ms": 12.91,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/advanced/opentelemetry/",
+          "https://fastapi.tiangolo.com/tutorial/middleware/",
+          "https://fastapi.tiangolo.com/deployment/server-workers/",
+          "https://fastapi.tiangolo.com/deployment/docker/",
+          "https://fastapi.tiangolo.com/async/"
+        ]
+      },
+      {
+        "id": "Q14",
+        "question": "How do I allow requests from another frontend domain using CORS in FastAPI?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/cors"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/cors/",
+        "expected_rank": 2,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 12.57,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
+          "https://fastapi.tiangolo.com/tutorial/cors/",
+          "https://fastapi.tiangolo.com/deployment/docker/",
+          "https://fastapi.tiangolo.com/advanced/dataclasses/",
+          "https://fastapi.tiangolo.com/deployment/server-workers/"
+        ]
+      },
+      {
+        "id": "Q15",
+        "question": "How do I add middleware to a FastAPI application?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/middleware",
+          "https://fastapi.tiangolo.com/advanced/middleware",
+          "https://fastapi.tiangolo.com/reference/middleware"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/middleware/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 8.99,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/advanced/middleware/",
+          "https://fastapi.tiangolo.com/tutorial/middleware/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/deployment/server-workers/",
+          "https://fastapi.tiangolo.com/deployment/"
+        ]
+      },
+      {
+        "id": "Q16",
+        "question": "How can FastAPI serve static files such as CSS or images?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/static-files",
+          "https://fastapi.tiangolo.com/reference/staticfiles"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/reference/staticfiles/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 9.07,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/reference/staticfiles/",
+          "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+          "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
+          "https://fastapi.tiangolo.com/reference/fastapi/",
+          "https://fastapi.tiangolo.com/reference/apirouter/"
+        ]
+      },
+      {
+        "id": "Q17",
+        "question": "How do I create a WebSocket endpoint in FastAPI?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/advanced/websockets"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/advanced/websockets/",
+        "expected_rank": 3,
+        "hit_at_1": false,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 7.38,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/advanced/opentelemetry/",
+          "https://fastapi.tiangolo.com/deployment/server-workers/",
+          "https://fastapi.tiangolo.com/advanced/websockets/",
+          "https://fastapi.tiangolo.com/deployment/docker/",
+          "https://fastapi.tiangolo.com/reference/fastapi/"
+        ]
+      },
+      {
+        "id": "Q18",
+        "question": "How do I test a FastAPI application?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/testing"
+        ],
+        "matched_url": null,
+        "expected_rank": null,
+        "hit_at_1": false,
+        "hit_at_3": false,
+        "hit_at_5": false,
+        "response_time_ms": 5.98,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/deployment/server-workers/",
+          "https://fastapi.tiangolo.com/deployment/docker/",
+          "https://fastapi.tiangolo.com/advanced/async-tests/",
+          "https://fastapi.tiangolo.com/deployment/",
+          "https://fastapi.tiangolo.com/advanced/generate-clients/"
+        ]
+      },
+      {
+        "id": "Q19",
+        "question": "How can I add metadata such as a title and description to my FastAPI application?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/metadata"
+        ],
+        "matched_url": null,
+        "expected_rank": null,
+        "hit_at_1": false,
+        "hit_at_3": false,
+        "hit_at_5": false,
+        "response_time_ms": 14.32,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
+          "https://fastapi.tiangolo.com/tutorial/testing/",
+          "https://fastapi.tiangolo.com/advanced/opentelemetry/",
+          "https://fastapi.tiangolo.com/",
+          "https://fastapi.tiangolo.com/tutorial/testing/"
+        ]
+      },
+      {
+        "id": "Q20",
+        "question": "How do I secure a FastAPI API using OAuth2 with JWT tokens?",
+        "expected_urls": [
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt"
+        ],
+        "matched_url": "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "expected_rank": 1,
+        "hit_at_1": true,
+        "hit_at_3": true,
+        "hit_at_5": true,
+        "response_time_ms": 8.39,
+        "retrieved_urls": [
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+          "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/",
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+          "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/"
         ]
       }
     ]
