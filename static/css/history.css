@@ -1,0 +1,201 @@
+/* ============================================================
+   CHATGPT-STYLE SIDEBAR HISTORY
+============================================================ */
+
+
+/* ------------------------------------------------------------
+   SIDEBAR LAYOUT
+
+   1 = Header
+   2 = Main navigation
+   3 = Recents title
+   4 = Scrollable chat history
+   5 = User profile
+------------------------------------------------------------ */
+
+.sidebar {
+    height: 100vh !important;
+    max-height: 100vh !important;
+
+    box-sizing: border-box !important;
+
+    display: grid !important;
+
+    grid-template-rows:
+        auto
+        auto
+        auto
+        minmax(0, 1fr)
+        auto !important;
+
+    overflow: hidden !important;
+}
+
+
+/* ============================================================
+   FIXED SECTIONS
+============================================================ */
+
+.sidebar-head {
+    min-height: 0;
+}
+
+.side-nav {
+    min-height: 0;
+}
+
+.side-section-title {
+    min-height: 0;
+}
+
+
+/* ============================================================
+   RECENTS — THIS IS THE SCROLLING AREA
+============================================================ */
+
+.history-list {
+    min-width: 0 !important;
+    min-height: 0 !important;
+
+    width: 100% !important;
+    height: auto !important;
+
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+
+    overscroll-behavior: contain;
+
+    padding-right: 4px;
+    padding-bottom: 12px;
+
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+}
+
+
+/* ============================================================
+   PROFILE — ALWAYS STAYS AT BOTTOM
+============================================================ */
+
+.sidebar-bottom {
+    margin-top: 0 !important;
+
+    padding-top: 10px !important;
+
+    border-top:
+        1px solid
+        var(--border);
+
+    background:
+        var(--sidebar);
+
+    position: relative;
+
+    z-index: 20;
+}
+
+
+/* ============================================================
+   CHAT ROWS
+============================================================ */
+
+.history-row {
+    flex-shrink: 0 !important;
+}
+
+.history-item {
+    min-width: 0;
+}
+
+
+/* ============================================================
+   SCROLLBAR
+============================================================ */
+
+.history-list::-webkit-scrollbar {
+    width: 7px;
+}
+
+.history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+    background:
+        rgba(
+            150,
+            150,
+            165,
+            0.38
+        );
+
+    border-radius: 999px;
+}
+
+.history-list::-webkit-scrollbar-thumb:hover {
+    background:
+        rgba(
+            170,
+            170,
+            190,
+            0.58
+        );
+}
+/* ============================================================
+   FORCE RECENTS TO SCROLL
+   Overrides history style injected by app.js
+============================================================ */
+
+.sidebar #history-container {
+    min-height: 0 !important;
+    height: 100% !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    overscroll-behavior: contain !important;
+}
+/* ============================================================
+   RECENTS SCROLLBAR APPEARANCE ONLY
+   Does not change sidebar layout or scrolling behaviour
+============================================================ */
+
+#history-container {
+    scrollbar-width: thin;
+    scrollbar-color:
+        rgba(150, 150, 165, 0.45)
+        transparent;
+}
+
+#history-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#history-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#history-container::-webkit-scrollbar-thumb {
+    background:
+        rgba(150, 150, 165, 0.42);
+
+    border-radius: 999px;
+}
+
+#history-container::-webkit-scrollbar-thumb:hover {
+    background:
+        rgba(175, 175, 195, 0.65);
+}
+
+body[data-theme="light"]
+#history-container {
+    scrollbar-color:
+        rgba(80, 80, 90, 0.30)
+        transparent;
+}
+
+body[data-theme="light"]
+#history-container::-webkit-scrollbar-thumb {
+    background:
+        rgba(80, 80, 90, 0.30);
+}
