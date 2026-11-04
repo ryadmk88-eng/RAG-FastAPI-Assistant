@@ -3163,6 +3163,8 @@ function renderHistory(
     filterText = ""
 ) {
 
+    return;
+
     if (!historyContainer) {
         return;
     }
