@@ -23,6 +23,7 @@ from auth import get_logged_in_user
 
 from feedback_routes import router as feedback_router
 from about_page import get_about_content
+from results_page import get_results_content
 from chat_service import (
     save_compare_chat,
     save_rag_chat,
@@ -4488,187 +4489,17 @@ def about_page():
         "About · FastAPI Assistant",
     )
 
-
 # ============================================================
 # RESULTS
 # ============================================================
 
-def load_results():
-
-    if not RESULTS_FILE.exists():
-        return None
-
-    try:
-
-        return json.loads(
-            RESULTS_FILE.read_text(
-                encoding="utf-8"
-            )
-        )
-
-    except Exception as exc:
-
-        print(
-            "Could not load results:",
-            repr(exc),
-        )
-
-        return None
-
-
 def results_page():
 
-    data = load_results()
-
-    if not data:
-
-        return document(
-            """
-            <section class="page">
-
-                <div class="error-card">
-                    Evaluation results
-                    could not be loaded.
-                </div>
-
-            </section>
-            """,
-
-            "Results · FastAPI Assistant",
-        )
-
-    semantic = (
-        data[
-            "retrieval_results"
-        ]["semantic"]
-    )
-
-    bm25 = (
-        data[
-            "retrieval_results"
-        ]["bm25"]
-    )
-
-    semantic_answer = (
-        data[
-            "answer_quality_results"
-        ]["semantic"]
-    )
-
-    bm25_answer = (
-        data[
-            "answer_quality_results"
-        ]["bm25"]
-    )
-
-    metrics = [
-        (
-            "Semantic Top-1",
-            f'{semantic["hit_at_1"] * 100:.0f}%',
-        ),
-        (
-            "BM25 Top-1",
-            f'{bm25["hit_at_1"] * 100:.0f}%',
-        ),
-        (
-            "Semantic Top-3",
-            f'{semantic["hit_at_3"] * 100:.0f}%',
-        ),
-        (
-            "BM25 Top-3",
-            f'{bm25["hit_at_3"] * 100:.0f}%',
-        ),
-        (
-            "Semantic Top-5",
-            f'{semantic["hit_at_5"] * 100:.0f}%',
-        ),
-        (
-            "BM25 Top-5",
-            f'{bm25["hit_at_5"] * 100:.0f}%',
-        ),
-        (
-            "Semantic correctness",
-            f'{semantic_answer["correctness_percentage"]:.1f}%',
-        ),
-        (
-            "BM25 correctness",
-            f'{bm25_answer["correctness_percentage"]:.1f}%',
-        ),
-    ]
-
-    metric_html = "".join(
-        f"""
-        <div class="metric-card">
-
-            <span>
-                {html.escape(label)}
-            </span>
-
-            <strong>
-                {html.escape(value)}
-            </strong>
-
-        </div>
-        """
-        for label, value
-        in metrics
-    )
-
-    graph_names = [
-        "retrieval_accuracy.png",
-        "mean_reciprocal_rank.png",
-        "answer_correctness.png",
-        "retrieval_response_time.png",
-        "total_response_time.png",
-    ]
-
-    graph_html = "".join(
-        f"""
-        <div class="graph-card">
-
-            <img
-                src="/graphs/{filename}"
-                alt="{html.escape(filename)}"
-            >
-
-        </div>
-        """
-        for filename
-        in graph_names
-        if (
-            GRAPHS_DIR
-            / filename
-        ).exists()
-    )
-
     return document(
-        f"""
-        <section class="page">
-
-            <h1>
-                Evaluation results
-            </h1>
-
-            <p>
-                Candidate evaluation
-                comparing Semantic and BM25
-                retrieval on the FastAPI
-                documentation corpus.
-            </p>
-
-
-            <div class="metric-grid">
-                {metric_html}
-            </div>
-
-
-            <div class="graph-grid">
-                {graph_html}
-            </div>
-
-        </section>
-        """,
-
+        get_results_content(
+            RESULTS_FILE,
+            GRAPHS_DIR,
+        ),
         "Results · FastAPI Assistant",
     )
 
