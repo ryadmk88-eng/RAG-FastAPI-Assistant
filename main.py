@@ -22,7 +22,7 @@ from chat_routes import router as chat_router
 from auth import get_logged_in_user
 
 from feedback_routes import router as feedback_router
-
+from about_page import get_about_content
 from chat_service import (
     save_compare_chat,
     save_rag_chat,
@@ -4020,6 +4020,20 @@ def document(
     rel="stylesheet"
     href="/static/css/user_message.css"
 >
+<link
+    rel="stylesheet"
+    href="/static/css/history.css"
+>
+
+<link
+    rel="stylesheet"
+    href="/static/css/user_message.css"
+>
+
+<link
+    rel="stylesheet"
+    href="/static/css/about_page.css"
+>
 
 </head>
 
@@ -4464,89 +4478,10 @@ def home_page(
 
 def about_page():
 
-    content = """
-    <section class="page">
-
-        <h1>
-            About the project
-        </h1>
-
-        <p>
-            This project investigates a
-            RAG-based technical documentation
-            assistant using official FastAPI
-            documentation and compares semantic
-            retrieval with BM25.
-        </p>
-
-
-        <div class="info-grid">
-
-            <article class="info-card">
-
-                <h2>
-                    Documentation corpus
-                </h2>
-
-                <p>
-                    Official English FastAPI
-                    documentation is collected,
-                    cleaned, chunked and stored
-                    with source URLs.
-                </p>
-
-            </article>
-
-
-            <article class="info-card">
-
-                <h2>
-                    Semantic retrieval
-                </h2>
-
-                <p>
-                    Sentence embeddings retrieve
-                    chunks according to semantic
-                    similarity between the
-                    question and documentation.
-                </p>
-
-            </article>
-
-
-            <article class="info-card">
-
-                <h2>
-                    BM25 retrieval
-                </h2>
-
-                <p>
-                    BM25 provides the
-                    keyword-based baseline over
-                    the same documentation corpus.
-                </p>
-
-            </article>
-
-
-            <article class="info-card">
-
-                <h2>
-                    Grounded generation
-                </h2>
-
-                <p>
-                    Retrieved chunks are passed
-                    to the language model, which
-                    answers using those sources.
-                </p>
-
-            </article>
-
-        </div>
-
-    </section>
-    """
+    return document(
+        get_about_content(),
+        "About · FastAPI Assistant",
+    )
 
     return document(
         content,
