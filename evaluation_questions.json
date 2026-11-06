@@ -1,215 +1,219 @@
 [
-  {
-    "id": "Q01",
-    "question": "How do I handle request validation errors in FastAPI?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/handling-errors/",
-    "key_points": [
-      "FastAPI raises RequestValidationError for invalid request data",
-      "A custom handler can be registered with app.exception_handler",
-      "Validation errors can be inspected from the exception"
-    ]
-  },
-  {
-    "id": "Q02",
-    "question": "How do I send JSON data in the body of a FastAPI request?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/body/",
-    "key_points": [
-      "Request bodies are commonly declared using Pydantic models",
-      "The model defines the expected request data",
-      "FastAPI validates incoming request-body data"
-    ]
-  },
-  {
-    "id": "Q03",
-    "question": "How do I create a path parameter in FastAPI?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/path-params/",
-    "key_points": [
-      "Path parameters are declared inside the route path",
-      "The corresponding function parameter receives the value",
-      "Python type annotations can be used for validation"
-    ]
-  },
-  {
-    "id": "Q04",
-    "question": "How do query parameters work in FastAPI?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/query-params/",
-    "key_points": [
-      "Function parameters not included in the path can become query parameters",
-      "Type annotations are used for conversion and validation",
-      "Default values can make query parameters optional"
-    ]
-  },
-  {
-    "id": "Q05",
-    "question": "How can I use dependency injection in FastAPI?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/dependencies/",
-    "key_points": [
-      "Dependencies can be declared with Depends",
-      "FastAPI calls the dependency and injects its result",
-      "Dependencies can be reused across endpoints"
-    ]
-  },
-  {
-    "id": "Q06",
-    "question": "How do I use a response model in FastAPI to control and filter the data returned by an endpoint?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/response-model/",
-    "key_points": [
-      "A response model defines the expected output structure",
-      "FastAPI validates and filters returned data using the response model",
-      "Fields not included in the response model can be excluded from the response"
-    ]
-  },
-  {
-    "id": "Q07",
-    "question": "How can I receive multiple values in a FastAPI request body?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
-    "key_points": [
-      "Multiple body parameters can be declared",
-      "Body can be used to explicitly declare request-body values",
-      "Pydantic models and individual body values can be combined"
-    ]
-  },
-  {
-    "id": "Q08",
-    "question": "How do I run code when a FastAPI application starts or shuts down?",
-    "expected_url": "https://fastapi.tiangolo.com/advanced/events/",
-    "key_points": [
-      "Application startup and shutdown behavior can be managed",
-      "Lifespan functionality can be used for application lifecycle logic",
-      "Resources can be initialized and cleaned up around application execution"
-    ]
-  },
-  {
-    "id": "Q09",
-    "question": "How can I return a custom HTTP status code in FastAPI?",
-    "expected_urls": [
-      "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
-      "https://fastapi.tiangolo.com/tutorial/response-status-code/"
-    ],
-    "key_points": [
-      "Different HTTP status codes can be returned when required",
-      "A Response or JSONResponse can be returned directly",
-      "The response can specify its own status code"
-    ]
-  },
-  {
-    "id": "Q10",
-    "question": "How do I deploy a FastAPI application using Docker?",
-    "expected_url": "https://fastapi.tiangolo.com/deployment/docker/",
-    "key_points": [
-      "A Docker image can contain the FastAPI application",
-      "Dependencies and application files are copied into the image",
-      "The application server is started inside the container"
-    ]
-  },
-  {
-    "id": "Q11",
-    "question": "How do I upload files to a FastAPI endpoint?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/request-files/",
-    "key_points": [
-      "Files can be received using File",
-      "UploadFile can be used for uploaded files",
-      "Uploaded files are sent as form data"
-    ]
-  },
-  {
-    "id": "Q12",
-    "question": "How can a FastAPI endpoint receive form data instead of JSON?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/request-forms/",
-    "key_points": [
-      "Form data can be declared using Form",
-      "Form fields are received differently from JSON request bodies",
-      "Form parameters can be validated by FastAPI"
-    ]
-  },
-  {
-    "id": "Q13",
-    "question": "How do I run a task after returning a response from FastAPI?",
-    "expected_urls": [
-      "https://fastapi.tiangolo.com/tutorial/background-tasks/",
-      "https://fastapi.tiangolo.com/reference/background/"
-    ],
-    "key_points": [
-      "BackgroundTasks can schedule work after returning a response",
-      "A background task can be added inside a path operation",
-      "Background work can avoid delaying the response for small tasks"
-    ]
-  },
-  {
-    "id": "Q14",
-    "question": "How do I allow requests from another frontend domain using CORS in FastAPI?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/cors/",
-    "key_points": [
-      "CORSMiddleware can configure cross-origin requests",
-      "Allowed origins can be specified",
-      "Methods, headers and credentials can be configured"
-    ]
-  },
-  {
-    "id": "Q15",
-    "question": "How do I add middleware to a FastAPI application?",
-    "expected_urls": [
-      "https://fastapi.tiangolo.com/tutorial/middleware/",
-      "https://fastapi.tiangolo.com/advanced/middleware/",
-      "https://fastapi.tiangolo.com/reference/middleware/"
-    ],
-    "key_points": [
-      "Middleware can run logic before and after a request",
-      "Middleware receives the request and calls the next handler",
-      "Middleware can modify or inspect requests and responses"
-    ]
-  },
-  {
-    "id": "Q16",
-    "question": "How can FastAPI serve static files such as CSS or images?",
-    "expected_urls": [
-      "https://fastapi.tiangolo.com/tutorial/static-files/",
-      "https://fastapi.tiangolo.com/reference/staticfiles/"
-    ],
-    "key_points": [
-      "StaticFiles can be mounted on the FastAPI application",
-      "A directory can contain static content",
-      "Static content can be exposed under a URL path"
-    ]
-  },
-  {
-    "id": "Q17",
-    "question": "How do I create a WebSocket endpoint in FastAPI?",
-    "expected_url": "https://fastapi.tiangolo.com/advanced/websockets/",
-    "key_points": [
-      "FastAPI supports WebSocket routes",
-      "The WebSocket connection must be accepted",
-      "Messages can be sent and received over the connection"
-    ]
-  },
-  {
-    "id": "Q18",
-    "question": "How do I test a FastAPI application?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/testing/",
-    "key_points": [
-      "FastAPI applications can be tested using TestClient",
-      "Tests can send requests to application routes",
-      "Responses and status codes can be asserted"
-    ]
-  },
-  {
-    "id": "Q19",
-    "question": "How can I add metadata such as a title and description to my FastAPI application?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/metadata/",
-    "key_points": [
-      "Application metadata can be configured when creating FastAPI",
-      "Metadata can include a title and description",
-      "Metadata is used in generated API documentation"
-    ]
-  },
-  {
-    "id": "Q20",
-    "question": "How do I secure a FastAPI API using OAuth2 with JWT tokens?",
-    "expected_url": "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
-    "key_points": [
-      "OAuth2 can be used for authentication",
-      "JWT tokens can represent authenticated users",
-      "Tokens are created and validated as part of the authentication flow"
-    ]
-  }
+    {
+        "id":  "Q01",
+        "question":  "How do I handle request validation errors in FastAPI?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/handling-errors/",
+        "key_points":  [
+                           "FastAPI raises RequestValidationError for invalid request data",
+                           "A custom handler can be registered with app.exception_handler",
+                           "Validation errors can be inspected from the exception"
+                       ]
+    },
+    {
+        "id":  "Q02",
+        "question":  "How do I send JSON data in the body of a FastAPI request?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/body/",
+        "key_points":  [
+                           "Request bodies are commonly declared using Pydantic models",
+                           "The model defines the expected request data",
+                           "FastAPI validates incoming request-body data"
+                       ]
+    },
+    {
+        "id":  "Q03",
+        "question":  "How do I create a path parameter in FastAPI?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/path-params/",
+        "key_points":  [
+                           "Path parameters are declared inside the route path",
+                           "The corresponding function parameter receives the value",
+                           "Python type annotations can be used for validation"
+                       ]
+    },
+    {
+        "id":  "Q04",
+        "question":  "How do query parameters work in FastAPI?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/query-params/",
+        "key_points":  [
+                           "Function parameters not included in the path can become query parameters",
+                           "Type annotations are used for conversion and validation",
+                           "Default values can make query parameters optional"
+                       ]
+    },
+    {
+        "id":  "Q05",
+        "question":  "How can I use dependency injection in FastAPI?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/dependencies/",
+        "key_points":  [
+                           "Dependencies can be declared with Depends",
+                           "FastAPI calls the dependency and injects its result",
+                           "Dependencies can be reused across endpoints"
+                       ]
+    },
+    {
+        "id":  "Q06",
+        "question":  "How do I use a response model in FastAPI to control and filter the data returned by an endpoint?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/response-model/",
+        "key_points":  [
+                           "A response model defines the expected output structure",
+                           "FastAPI validates and filters returned data using the response model",
+                           "Fields not included in the response model can be excluded from the response"
+                       ]
+    },
+    {
+        "id":  "Q07",
+        "question":  "How can I receive multiple values in a FastAPI request body?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
+        "key_points":  [
+                           "Multiple body parameters can be declared",
+                           "Body can be used to explicitly declare request-body values",
+                           "Pydantic models and individual body values can be combined"
+                       ]
+    },
+    {
+        "id":  "Q08",
+        "question":  "How do I run code when a FastAPI application starts or shuts down?",
+        "expected_url":  "https://fastapi.tiangolo.com/advanced/events/",
+        "key_points":  [
+                           "Application startup and shutdown behavior can be managed",
+                           "Lifespan functionality can be used for application lifecycle logic",
+                           "Resources can be initialized and cleaned up around application execution"
+                       ]
+    },
+    {
+        "id":  "Q09",
+        "question":  "How can I return a custom HTTP status code in FastAPI?",
+        "expected_urls":  [
+                              "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
+                              "https://fastapi.tiangolo.com/tutorial/response-status-code/"
+                          ],
+        "key_points":  [
+                           "Different HTTP status codes can be returned when required",
+                           "A Response or JSONResponse can be returned directly",
+                           "The response can specify its own status code"
+                       ],
+        "expected_url":  "https://fastapi.tiangolo.com/advanced/additional-status-codes/"
+    },
+    {
+        "id":  "Q10",
+        "question":  "How do I deploy a FastAPI application using Docker?",
+        "expected_url":  "https://fastapi.tiangolo.com/deployment/docker/",
+        "key_points":  [
+                           "A Docker image can contain the FastAPI application",
+                           "Dependencies and application files are copied into the image",
+                           "The application server is started inside the container"
+                       ]
+    },
+    {
+        "id":  "Q11",
+        "question":  "How do I upload files to a FastAPI endpoint?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/request-files/",
+        "key_points":  [
+                           "Files can be received using File",
+                           "UploadFile can be used for uploaded files",
+                           "Uploaded files are sent as form data"
+                       ]
+    },
+    {
+        "id":  "Q12",
+        "question":  "How can a FastAPI endpoint receive form data instead of JSON?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/request-forms/",
+        "key_points":  [
+                           "Form data can be declared using Form",
+                           "Form fields are received differently from JSON request bodies",
+                           "Form parameters can be validated by FastAPI"
+                       ]
+    },
+    {
+        "id":  "Q13",
+        "question":  "How do I run a task after returning a response from FastAPI?",
+        "expected_urls":  [
+                              "https://fastapi.tiangolo.com/tutorial/background-tasks/",
+                              "https://fastapi.tiangolo.com/reference/background/"
+                          ],
+        "key_points":  [
+                           "BackgroundTasks can schedule work after returning a response",
+                           "A background task can be added inside a path operation",
+                           "Background work can avoid delaying the response for small tasks"
+                       ],
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/background-tasks/"
+    },
+    {
+        "id":  "Q14",
+        "question":  "How do I allow requests from another frontend domain using CORS in FastAPI?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/cors/",
+        "key_points":  [
+                           "CORSMiddleware can configure cross-origin requests",
+                           "Allowed origins can be specified",
+                           "Methods, headers and credentials can be configured"
+                       ]
+    },
+    {
+        "id":  "Q15",
+        "question":  "How do I add middleware to a FastAPI application?",
+        "expected_urls":  [
+                              "https://fastapi.tiangolo.com/tutorial/middleware/",
+                              "https://fastapi.tiangolo.com/advanced/middleware/",
+                              "https://fastapi.tiangolo.com/reference/middleware/"
+                          ],
+        "key_points":  [
+                           "Middleware can run logic before and after a request",
+                           "Middleware receives the request and calls the next handler",
+                           "Middleware can modify or inspect requests and responses"
+                       ],
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/middleware/"
+    },
+    {
+        "id":  "Q16",
+        "question":  "How can FastAPI serve static files such as CSS or images?",
+        "expected_urls":  [
+                              "https://fastapi.tiangolo.com/tutorial/static-files/",
+                              "https://fastapi.tiangolo.com/reference/staticfiles/"
+                          ],
+        "key_points":  [
+                           "StaticFiles can be mounted on the FastAPI application",
+                           "A directory can contain static content",
+                           "Static content can be exposed under a URL path"
+                       ],
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/static-files/"
+    },
+    {
+        "id":  "Q17",
+        "question":  "How do I create a WebSocket endpoint in FastAPI?",
+        "expected_url":  "https://fastapi.tiangolo.com/advanced/websockets/",
+        "key_points":  [
+                           "FastAPI supports WebSocket routes",
+                           "The WebSocket connection must be accepted",
+                           "Messages can be sent and received over the connection"
+                       ]
+    },
+    {
+        "id":  "Q18",
+        "question":  "How do I test a FastAPI application?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/testing/",
+        "key_points":  [
+                           "FastAPI applications can be tested using TestClient",
+                           "Tests can send requests to application routes",
+                           "Responses and status codes can be asserted"
+                       ]
+    },
+    {
+        "id":  "Q19",
+        "question":  "How can I add metadata such as a title and description to my FastAPI application?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/metadata/",
+        "key_points":  [
+                           "Application metadata can be configured when creating FastAPI",
+                           "Metadata can include a title and description",
+                           "Metadata is used in generated API documentation"
+                       ]
+    },
+    {
+        "id":  "Q20",
+        "question":  "How do I secure a FastAPI API using OAuth2 with JWT tokens?",
+        "expected_url":  "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
+        "key_points":  [
+                           "OAuth2 can be used for authentication",
+                           "JWT tokens can represent authenticated users",
+                           "Tokens are created and validated as part of the authentication flow"
+                       ]
+    }
 ]

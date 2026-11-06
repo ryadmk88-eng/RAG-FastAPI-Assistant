@@ -12,7 +12,7 @@
       "hit_at_3": 0.95,
       "hit_at_5": 0.95,
       "mean_reciprocal_rank": 0.783,
-      "average_response_time_ms": 7.89
+      "average_response_time_ms": 14.86
     },
     "questions": [
       {
@@ -26,7 +26,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 21.04,
+        "response_time_ms": 152.59,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/handling-errors/",
           "https://fastapi.tiangolo.com/tutorial/handling-errors/",
@@ -46,7 +46,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.02,
+        "response_time_ms": 8.14,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/",
           "https://fastapi.tiangolo.com/tutorial/request-files/",
@@ -66,7 +66,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.73,
+        "response_time_ms": 6.92,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/path-params/",
           "https://fastapi.tiangolo.com/reference/parameters/",
@@ -86,7 +86,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 5.92,
+        "response_time_ms": 7.28,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/reference/parameters/",
           "https://fastapi.tiangolo.com/tutorial/query-params/",
@@ -106,7 +106,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.88,
+        "response_time_ms": 6.83,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/features/",
           "https://fastapi.tiangolo.com/tutorial/dependencies/",
@@ -126,7 +126,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.88,
+        "response_time_ms": 8.39,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/response-model/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -146,7 +146,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.18,
+        "response_time_ms": 8.21,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
           "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
@@ -166,7 +166,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.64,
+        "response_time_ms": 8.98,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/events/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -187,7 +187,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.71,
+        "response_time_ms": 7.72,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/additional-status-codes/",
           "https://fastapi.tiangolo.com/reference/status/",
@@ -207,7 +207,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.79,
+        "response_time_ms": 8.24,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/docker/",
           "https://fastapi.tiangolo.com/deployment/docker/",
@@ -227,7 +227,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.03,
+        "response_time_ms": 7.57,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/reference/uploadfile/",
           "https://fastapi.tiangolo.com/tutorial/request-files/",
@@ -247,7 +247,7 @@
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": false,
-        "response_time_ms": 7.98,
+        "response_time_ms": 7.8,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/request-files/",
           "https://fastapi.tiangolo.com/",
@@ -268,7 +268,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.62,
+        "response_time_ms": 7.89,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/reference/background/",
           "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
@@ -288,7 +288,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.78,
+        "response_time_ms": 8.71,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/cors/",
           "https://fastapi.tiangolo.com/tutorial/cors/",
@@ -310,7 +310,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.21,
+        "response_time_ms": 6.19,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/middleware/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -331,7 +331,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.23,
+        "response_time_ms": 6.39,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/reference/staticfiles/",
           "https://fastapi.tiangolo.com/tutorial/static-files/",
@@ -351,7 +351,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.7,
+        "response_time_ms": 7.38,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/websockets/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -371,7 +371,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.0,
+        "response_time_ms": 7.6,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/versions/",
           "https://fastapi.tiangolo.com/reference/testclient/",
@@ -391,7 +391,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.68,
+        "response_time_ms": 6.78,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/metadata/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -411,7 +411,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 6.8,
+        "response_time_ms": 7.57,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
           "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
@@ -429,7 +429,7 @@
       "hit_at_3": 0.75,
       "hit_at_5": 0.8,
       "mean_reciprocal_rank": 0.552,
-      "average_response_time_ms": 9.8
+      "average_response_time_ms": 10.8
     },
     "questions": [
       {
@@ -443,7 +443,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 10.8,
+        "response_time_ms": 11.77,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/how-to/custom-request-and-route/",
           "https://fastapi.tiangolo.com/deployment/server-workers/",
@@ -463,7 +463,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 10.54,
+        "response_time_ms": 13.34,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/testing/",
           "https://fastapi.tiangolo.com/reference/apirouter/",
@@ -483,7 +483,7 @@
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": false,
-        "response_time_ms": 7.69,
+        "response_time_ms": 8.33,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/server-workers/",
           "https://fastapi.tiangolo.com/deployment/docker/",
@@ -503,7 +503,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 5.07,
+        "response_time_ms": 7.13,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/query-params/",
           "https://fastapi.tiangolo.com/reference/fastapi/",
@@ -523,7 +523,7 @@
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": true,
-        "response_time_ms": 8.06,
+        "response_time_ms": 9.2,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/background-tasks/",
           "https://fastapi.tiangolo.com/alternatives/",
@@ -543,7 +543,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 14.3,
+        "response_time_ms": 17.25,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/response-headers/",
           "https://fastapi.tiangolo.com/tutorial/response-model/",
@@ -563,7 +563,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.24,
+        "response_time_ms": 10.37,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/body-multiple-params/",
           "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
@@ -583,7 +583,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 11.15,
+        "response_time_ms": 12.85,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/events/",
           "https://fastapi.tiangolo.com/advanced/events/",
@@ -604,7 +604,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 10.8,
+        "response_time_ms": 12.39,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/response-status-code/",
           "https://fastapi.tiangolo.com/advanced/response-change-status-code/",
@@ -624,7 +624,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.73,
+        "response_time_ms": 7.71,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/docker/",
           "https://fastapi.tiangolo.com/deployment/server-workers/",
@@ -644,7 +644,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.79,
+        "response_time_ms": 9.85,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/server-workers/",
           "https://fastapi.tiangolo.com/deployment/docker/",
@@ -664,7 +664,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 12.23,
+        "response_time_ms": 9.73,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/request-files/",
           "https://fastapi.tiangolo.com/tutorial/request-forms/",
@@ -685,7 +685,7 @@
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": false,
-        "response_time_ms": 12.91,
+        "response_time_ms": 12.6,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/opentelemetry/",
           "https://fastapi.tiangolo.com/tutorial/middleware/",
@@ -705,7 +705,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 12.57,
+        "response_time_ms": 17.07,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/security/first-steps/",
           "https://fastapi.tiangolo.com/tutorial/cors/",
@@ -727,7 +727,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.99,
+        "response_time_ms": 11.24,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/middleware/",
           "https://fastapi.tiangolo.com/tutorial/middleware/",
@@ -748,7 +748,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 9.07,
+        "response_time_ms": 7.19,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/reference/staticfiles/",
           "https://fastapi.tiangolo.com/how-to/custom-docs-ui-assets/",
@@ -768,7 +768,7 @@
         "hit_at_1": false,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 7.38,
+        "response_time_ms": 8.88,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/advanced/opentelemetry/",
           "https://fastapi.tiangolo.com/deployment/server-workers/",
@@ -788,7 +788,7 @@
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": false,
-        "response_time_ms": 5.98,
+        "response_time_ms": 7.75,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/deployment/server-workers/",
           "https://fastapi.tiangolo.com/deployment/docker/",
@@ -808,7 +808,7 @@
         "hit_at_1": false,
         "hit_at_3": false,
         "hit_at_5": false,
-        "response_time_ms": 14.32,
+        "response_time_ms": 13.56,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/query-params-str-validations/",
           "https://fastapi.tiangolo.com/tutorial/testing/",
@@ -828,7 +828,7 @@
         "hit_at_1": true,
         "hit_at_3": true,
         "hit_at_5": true,
-        "response_time_ms": 8.39,
+        "response_time_ms": 7.89,
         "retrieved_urls": [
           "https://fastapi.tiangolo.com/tutorial/security/oauth2-jwt/",
           "https://fastapi.tiangolo.com/tutorial/security/simple-oauth2/",
