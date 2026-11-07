@@ -4006,6 +4006,11 @@ def document(
             "
         >
 
+    <link
+        rel="icon"
+        type="image/png"
+        href="/static/images/favicon.png"
+    >
         <title>
             {safe_title}
         </title>
