@@ -4075,7 +4075,7 @@ def document(
     {JS}
 </script>
 
-<script src="/static/js/app.js"></script>
+<script src="/static/js/app.js?v=2"></script>
 <script src="/static/js/feedback.js"></script>
  <script src="/static/js/search_chats.js"></script> 
 <script src="/static/js/regenerate.js"></script>
@@ -4166,9 +4166,22 @@ def user_message_html(
 # COMPOSER
 # ============================================================
 
+
 def composer_html(
-    method="semantic"
+    method="semantic",
+    chat_id=None,
 ):
+    chat_id_html = (
+        f'''
+        <input
+            type="hidden"
+            name="chat_id"
+            value="{chat_id}"
+        >
+        '''
+        if chat_id is not None
+        else ""
+    )
 
     semantic_selected = (
         "selected"
@@ -4197,7 +4210,7 @@ def composer_html(
             class="composer"
             id="question-form"
         >
-
+        {chat_id_html}
             <textarea
                 name="question"
                 id="question-input"
@@ -4283,6 +4296,7 @@ def home_page(
     result=None,
     compare_results=None,
     error=None,
+    chat_id=None,
 ):
 
     if error:
@@ -4454,9 +4468,10 @@ def home_page(
 
 
     {
-        composer_html(
-            method
-        )
+      composer_html(
+       method,
+       chat_id,
+       )
     }
     """
 
@@ -4647,7 +4662,7 @@ async def ask_question(
 
             try:
 
-               save_rag_chat(
+               chat_id = save_rag_chat(
     user_id=user["id"],
     question=question,
     result=result,
@@ -4666,6 +4681,7 @@ async def ask_question(
             question=question,
             method=retrieval_method,
             result=result,
+             chat_id=chat_id,
         )
 
 
