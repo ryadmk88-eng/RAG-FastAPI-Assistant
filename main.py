@@ -20,6 +20,12 @@ from database import init_db
 from semantic_search import MODEL_NAME, load_data
 from chat_routes import router as chat_router
 from auth import get_logged_in_user
+from guest_chat import (
+    get_guest_history,
+    guest_limit_reached,
+    init_guest_store,
+    save_guest_turn,
+)
 
 from feedback_routes import router as feedback_router
 from about_page import get_about_content
@@ -92,6 +98,7 @@ app.add_middleware(
 )
 
 init_db()
+init_guest_store()
 
 app.mount(
     "/static",
@@ -2940,24 +2947,23 @@ body.empty-chat
     border:
         1px solid
         rgba(
-            255,
-            125,
-            141,
-            .25
+            139,
+            92,
+            246,
+            .35
         );
 
     border-radius: 12px;
 
     background:
         rgba(
-            255,
-            125,
-            141,
-            .07
+            139,
+            92,
+            246,
+            .10
         );
 
-    color:
-        var(--danger);
+    color: inherit;
 
     font-size: 10px;
 }
@@ -4297,7 +4303,8 @@ def home_page(
     compare_results=None,
     error=None,
     chat_id=None,
-):
+    guest_history="",
+    ):
 
     if error:
 
@@ -4434,6 +4441,35 @@ def home_page(
 
         </section>
         """
+    if guest_history:
+        conversation = (
+            guest_history
+            + conversation
+        )
+
+    guest_scroll_script = ""
+
+    if guest_history:
+        guest_scroll_script = """
+        <script>
+        window.addEventListener(
+            "load",
+            function () {
+                setTimeout(
+                    function () {
+                        window.scrollTo(
+                            {
+                                top: document.documentElement.scrollHeight,
+                                behavior: "smooth"
+                            }
+                        );
+                    },
+                    120
+                );
+            }
+        );
+        </script>
+        """
 
     content = f"""
     <div
@@ -4473,6 +4509,8 @@ def home_page(
        chat_id,
        )
     }
+
+    {guest_scroll_script}
     """
 
     body_class = (
@@ -4587,6 +4625,27 @@ async def ask_question(
             request
         )
 
+        guest_history = ""
+
+        if not user:
+            guest_history = get_guest_history(
+                request
+            )
+
+            if guest_limit_reached(
+                request
+            ):
+                return home_page(
+                    question=question,
+                    method=retrieval_method,
+                    error=(
+                        "You have used your 5 free questions. "
+                        "Sign in to continue now, or try again "
+                        "after 2 hours."
+                    ),
+                    guest_history=guest_history,
+                )
+
 
         # ====================================================
         # COMPARE MODE
@@ -4634,6 +4693,51 @@ async def ask_question(
                     )
 
 
+            if not user:
+                semantic_card = result_card(
+                    semantic_result,
+                    "semantic-answer",
+                    compact=True,
+                )
+
+                bm25_card = result_card(
+                    bm25_result,
+                    "bm25-answer",
+                    compact=True,
+                )
+
+                guest_turn_html = f"""
+                {user_message_html(question)}
+
+                {
+                    compare_summary_card(
+                        semantic_result,
+                        bm25_result,
+                    )
+                }
+
+                <section class="assistant-block">
+
+                    <div class="assistant-label">
+                        FastAPI Assistant ? Compare mode
+                    </div>
+
+                    <div class="compare-grid">
+
+                        {semantic_card}
+
+                        {bm25_card}
+
+                    </div>
+
+                </section>
+                """
+
+                save_guest_turn(
+                    request,
+                    guest_turn_html,
+                )
+
             return home_page(
                 question=question,
                 method="compare",
@@ -4641,6 +4745,7 @@ async def ask_question(
                     semantic_result,
                     bm25_result,
                 ],
+                guest_history=guest_history,
             )
 
 
@@ -4677,11 +4782,37 @@ async def ask_question(
                 )
 
 
+        if not user:
+            guest_turn_html = f"""
+            {user_message_html(question)}
+
+            <section class="assistant-block">
+
+                <div class="assistant-label">
+                    FastAPI Assistant
+                </div>
+
+                {
+                    result_card(
+                        result,
+                        "main-answer",
+                    )
+                }
+
+            </section>
+            """
+
+            save_guest_turn(
+                request,
+                guest_turn_html,
+            )
+
         return home_page(
             question=question,
             method=retrieval_method,
             result=result,
-             chat_id=chat_id,
+            chat_id=chat_id,
+            guest_history=guest_history,
         )
 
 
